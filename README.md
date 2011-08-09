@@ -39,20 +39,20 @@ ref-sources.vim
 
 注意!: ウインドウを閉じずに他のソースを表示すると、縮小されたままになります。
 
-    ```vim
-    let g:ref_kotobank_auto_resize = 1
-    let g:ref_kotobankej_auto_resize = 1
-    ```
+```vim
+let g:ref_kotobank_auto_resize = 1
+let g:ref_kotobankej_auto_resize = 1
+```
 
 ### webapi-vim を使用しない
 
 webapi-vim をインストールしていない場合は、自動で `0` に設定されるので、
 わざわざ設定する必要はありません。
 
-    ```vim
-    let g:ref_kotobank_use_webapi = 0
-    let g:ref_kotobankej_use_webapi = 0
-    ```
+```vim
+let g:ref_kotobank_use_webapi = 0
+let g:ref_kotobankej_use_webapi = 0
+```
 
 TODO
 ----
