@@ -2,7 +2,7 @@
 " File:         autoload/ref/kotobank.vim
 " Author:       mojako <moja.ojj@gmail.com>
 " URL:          https://github.com/mojako/ref-sources.vim
-" Last Change:  2011-08-09
+" Last Change:  2011-08-10
 " ============================================================================
 
 scriptencoding utf-8
@@ -21,12 +21,16 @@ if !exists('g:ref_kotobank_auto_resize_min_size')
     let g:ref_kotobank_auto_resize_min_size = 10
 endif
 
+if !exists('g:ref_kotobank_use_cache')
+    let g:ref_kotobank_use_cache = 0
+endif
+
 if !exists('g:ref_kotobank_use_webapi')
     let g:ref_kotobank_use_webapi = globpath(&rtp, 'autoload/http.vim') != ''
 endif
 "}}}
 
-let s:source = {'name': 'kotobank'}
+let s:source = {'name': 'kotobank', 'version': 100}
 
 " s:source.available() {{{1
 " ====================
@@ -37,67 +41,13 @@ endfunction
 " s:source.get_body( <query> ) {{{1
 " ============================
 function! s:source.get_body(query)
-    let url = 'http://kotobank.jp/search/result?q='
-      \ . s:encodeURIComponent(s:iconv(a:query, &enc, 'utf-8'))
+    let q = s:encodeURIComponent(s:iconv(a:query, &enc, 'utf-8'))
 
-    " Webページを取得 {{{2
-    if g:ref_kotobank_use_webapi
-        let ret = http#get(url).content
+    if g:ref_kotobank_use_cache
+        return s:iconv(self.cache(q, s:func('get_body')), 'utf-8', &enc)
     else
-        let ret = system("curl -kLs '" . url . "'")
+        return s:iconv(s:get_body(q), 'utf-8', &enc)
     endif
-
-    " 一致する結果がないとき、空の結果を返す {{{2
-    if ret =~# '<div id="notFound">'
-        return ''
-    endif
-    "}}}2
-
-    " 改行とタブを削除 {{{2
-    let ret = substitute(ret, '[\n\r\t]', '', 'g')
-
-    " 検索結果部分を抽出 {{{2
-    let ret = matchstr(ret,
-      \ '<ul class="word_dic">\zs.\{-}\ze</ul>\%(<ul class="word_dic">\)\@!')
-
-    " 不要な部分を削除 {{{2
-    let ret = substitute(ret, '<li class="ad">.\{-}</li>', '', 'g')
-    let ret = substitute(ret, '<li class="source">.\{-}</li>', '', 'g')
-    let ret = substitute(ret, '<li class="word_open">.\{-}</li>', '', 'g')
-
-    " <br>, <li> タグを改行に変換 {{{2
-    let ret = substitute(ret, '<br />&nbsp;<br />', '\n', 'g') " 微調整
-    let ret = substitute(ret, '<\%(br\|li\)\%(\s[^>]*\)\?>', '\n', 'g')
-
-    " <b> タグを置換 {{{2
-    let ret = substitute(ret, '<b>\s*\(.\{-}\)\s*</b>', '**\1**', 'g')
-
-    " すべてのタグを削除 {{{2
-    let ret = substitute(ret, '<[^>]*>', '', 'g')
-
-    " 微調整 {{{2
-    let ret = substitute(ret, '\n\*\*.\{-}\*\*\zs\s*', '\t', 'g')
-
-    " 文字参照を置換 {{{2
-    let ret = substitute(ret, '&#\(\d\+\);', '\=nr2char(submatch(1))', 'g')
-    let ret = substitute(ret, '&#x\(\x\+\);',
-      \ '\=nr2char("0x" . submatch(1))', 'g')
-
-    let ret = substitute(ret, '&gt;', '>', 'g')
-    let ret = substitute(ret, '&lt;', '<', 'g')
-    let ret = substitute(ret, '&quot;', '"', 'g')
-    let ret = substitute(ret, '&apos;', "'", 'g')
-    let ret = substitute(ret, '&nbsp;', '　', 'g')
-    let ret = substitute(ret, '&amp;', '\&', 'g')
-
-    " 空行を詰める {{{2
-    let ret = substitute(ret, '\s\+\n', '\n', 'g')
-    let ret = substitute(ret, '\n\{3,}', '\n\n', 'g')
-    let ret = substitute(ret, '^\n\+', '', 'g')
-    let ret = substitute(ret, '\n\+$', '', 'g')
-    "}}}2
-
-    return s:iconv(ret, 'utf-8', &enc)
 endfunction
 
 " s:source.leave() {{{1
@@ -110,7 +60,6 @@ endfunction
 " ==========================
 function! s:source.opened(query)
     setl nolist
-    setl conceallevel=2
 
     call s:syntax()
 
@@ -162,19 +111,100 @@ function! s:encodeURIComponent(str)
     return ret
 endfunction
 
+" s:func( <function_name> ) {{{1
+" =========================
+function! s:func(name)
+    return function(matchstr(expand('<sfile>'), '<SNR>\d\+_\zefunc$') . a:name)
+endfunction
+
+" s:get_body( <query> ) {{{1
+" =====================
+function! s:get_body(query)
+    let url = 'http://kotobank.jp/search/result?q=' . a:query
+
+    " Webページを取得 {{{2
+    let ret = s:get_url(url)
+
+    " 一致する結果がないとき、空の結果を返す {{{2
+    if ret =~# '<div id="notFound">'
+        return ''
+    endif
+    "}}}2
+
+    " 改行とタブを削除 {{{2
+    let ret = substitute(ret, '[\n\r\t]', '', 'g')
+
+    " 検索結果部分を抽出 {{{2
+    let ret = matchstr(ret,
+      \ '<ul class="word_dic">\zs.\{-}\ze</ul>\%(<ul class="word_dic">\)\@!')
+
+    " 不要な部分を削除 {{{2
+    let ret = substitute(ret, '<li class="ad">.\{-}</li>', '', 'g')
+    let ret = substitute(ret, '<li class="source">.\{-}</li>', '', 'g')
+    let ret = substitute(ret, '<li class="word_open">.\{-}</li>', '', 'g')
+
+    " <br>, <li> タグを改行に変換 {{{2
+    let ret = substitute(ret, '<br />&nbsp;<br />', '\n', 'g') " 微調整
+    let ret = substitute(ret, '<\%(br\|li\)\%(\s[^>]*\)\?>', '\n', 'g')
+
+    " <b> タグを置換 {{{2
+    let ret = substitute(ret, '<b>\s*\(.\{-}\)\s*</b>', '**\1**', 'g')
+
+    " すべてのタグを削除 {{{2
+    let ret = substitute(ret, '<[^>]*>', '', 'g')
+
+    " 微調整 {{{2
+    let ret = substitute(ret, '\n\*\*.\{-}\*\*\zs\s*', '\t', 'g')
+
+    " 文字参照を置換 {{{2
+    let ret = substitute(ret, '&#\(\d\+\);', '\=nr2char(submatch(1))', 'g')
+    let ret = substitute(ret, '&#x\(\x\+\);',
+      \ '\=nr2char("0x" . submatch(1))', 'g')
+
+    let ret = substitute(ret, '&gt;', '>', 'g')
+    let ret = substitute(ret, '&lt;', '<', 'g')
+    let ret = substitute(ret, '&quot;', '"', 'g')
+    let ret = substitute(ret, '&apos;', "'", 'g')
+    let ret = substitute(ret, '&nbsp;', '　', 'g')
+    let ret = substitute(ret, '&amp;', '\&', 'g')
+
+    " 空行を詰める {{{2
+    let ret = substitute(ret, '\s\+\n', '\n', 'g')
+    let ret = substitute(ret, '^\n\+', '', 'g')
+    let ret = substitute(ret, '\n\+$', '', 'g')
+    "}}}2
+
+    return split(ret, '\n\zs\n\+')
+endfunction
+
+" s:get_url( <url> ) {{{1
+" ==================
+function! s:get_url(url)
+    if g:ref_alc_use_webapi
+        return http#get(a:url).content
+    else
+        return ref#system(['curl', '-kLs', a:url]).stdout
+    endif
+endfunction
+
 " s:iconv( <expr>, <from>, <to> ) {{{1
 " ===============================
 function! s:iconv(expr, from, to)
-    if a:from == '' || a:to == '' || a:from ==# a:to
+    if a:from == '' || a:to == '' || a:from ==? a:to
         return a:expr
+    elseif type(a:expr) == type([]) || type(a:expr) == type({})
+        return map(a:expr, 's:iconv(v:val, a:from, a:to)')
     endif
-    let result = iconv(a:expr, a:from, a:to)
-    return result != '' ? result : a:expr
+
+    let ret = iconv(a:expr, a:from, a:to)
+    return ret != '' ? ret : a:expr
 endfunction
 
 " s:syntax() {{{1
 " ==========
 function! s:syntax()
+    setl conceallevel=2
+
     syn match  refKotobankDicName '^.*の解説$'
     syn match  refKotobankBold    '\*\*.\{-}\*\*' contains=refKotobankConceal
 
@@ -184,6 +214,12 @@ function! s:syntax()
     hi def link refKotobankBold     Identifier
 endfunction
 "}}}1
+
+if s:source.available() && g:ref_kotobank_use_cache
+  \ && ref#cache(s:source.name, '_version', [0])[0] < 100
+    call ref#rmcache(s:source.name)
+    call ref#cache(s:source.name, '_version', [s:source.version])
+endif
 
 " s:cpo_save {{{1
 let &cpo = s:cpo_save

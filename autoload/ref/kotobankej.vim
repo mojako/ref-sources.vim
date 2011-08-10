@@ -2,7 +2,7 @@
 " File:         autoload/ref/kotobankej.vim
 " Author:       mojako <moja.ojj@gmail.com>
 " URL:          https://github.com/mojako/ref-sources.vim
-" Last Change:  2011-08-09
+" Last Change:  2011-08-10
 " ============================================================================
 
 scriptencoding utf-8
@@ -21,12 +21,16 @@ if !exists('g:ref_kotobankej_auto_resize_min_size')
     let g:ref_kotobankej_auto_resize_min_size = 10
 endif
 
+if !exists('g:ref_kotobankej_use_cache')
+    let g:ref_kotobankej_use_cache = 0
+endif
+
 if !exists('g:ref_kotobankej_use_webapi')
     let g:ref_kotobankej_use_webapi = globpath(&rtp, 'autoload/http.vim') != ''
 endif
 "}}}
 
-let s:source = {'name': 'kotobankej'}
+let s:source = {'name': 'kotobankej', 'version': 100}
 
 " s:source.available() {{{1
 " ====================
@@ -37,15 +41,89 @@ endfunction
 " s:source.get_body( <query> ) {{{1
 " ============================
 function! s:source.get_body(query)
-    let url = 'http://kotobank.jp/ejsearch/result?q='
-      \ . s:encodeURIComponent(s:iconv(a:query, &enc, 'utf-8')) . '&t=2'
+    let q = s:encodeURIComponent(s:iconv(a:query, &enc, 'utf-8'))
+
+    if g:ref_kotobankej_use_cache
+        return s:iconv(self.cache(q, s:func('get_body')), 'utf-8', &enc)
+    else
+        return s:iconv(s:get_body(q), 'utf-8', &enc)
+    endif
+endfunction
+
+" s:source.leave() {{{1
+" ================
+function! s:source.leave()
+    syntax clear
+endfunction
+
+" s:source.opened( <query> ) {{{1
+" ==========================
+function! s:source.opened(query)
+    setl nolist
+
+    call s:syntax()
+
+    if g:ref_kotobankej_auto_resize
+        if !exists('w:old_height')
+            let w:old_height = winheight(0)
+        endif
+        let w = winwidth(0)
+        let i = 1
+        let h = 1
+        while h < w:old_height
+            let line = getline(i)
+            if line == ''
+                break
+            endif
+            let h = h + 1 + strdisplaywidth(line) / w
+            let i = i + 1
+        endwhile
+        if h < g:ref_kotobankej_auto_resize_min_size
+            let h = g:ref_kotobankej_auto_resize_min_size
+        elseif h > w:old_height
+            let h = w:old_height
+        endif
+        exe 'resize' h
+    endif
+endfunction
+"}}}1
+
+function! ref#kotobankej#define()
+    return copy(s:source)
+endfunction
+
+" s:encodeURIComponent( <string> ) {{{1
+" ================================
+function! s:encodeURIComponent(str)
+    let ret = ''
+    let len = strlen(a:str)
+    let i = 0
+    while i < len
+        if a:str[i] =~# "[0-9A-Za-z._~!'()*-]"
+            let ret .= a:str[i]
+        elseif a:str[i] == ' '
+            let ret .= '+'
+        else
+            let ret .= printf('%%%02X', char2nr(a:str[i]))
+        endif
+        let i = i + 1
+    endwhile
+    return ret
+endfunction
+
+" s:func( <function_name> ) {{{1
+" =========================
+function! s:func(name)
+    return function(matchstr(expand('<sfile>'), '<SNR>\d\+_\zefunc$') . a:name)
+endfunction
+
+" s:get_body( <query> ) {{{1
+" =====================
+function! s:get_body(query)
+    let url = 'http://kotobank.jp/ejsearch/result?q=' . a:query . '&t=2'
 
     " Webページを取得 {{{2
-    if g:ref_kotobankej_use_webapi
-        let ret = http#get(url).content
-    else
-        let ret = system("curl -kLs '" . url . "'")
-    endif
+    let ret = s:get_url(url)
 
     " 一致する結果がないとき、空の結果を返す {{{2
     if ret =~# '<p id="zero">' || ret =~# '<div id="EJunitList">'
@@ -123,89 +201,41 @@ function! s:source.get_body(query)
 
     " 空行を詰める {{{2
     let ret = substitute(ret, '\s\+\n', '\n', 'g')
-    let ret = substitute(ret, '\n\{3,}', '\n\n', 'g')
     let ret = substitute(ret, '^\n\+', '', 'g')
     let ret = substitute(ret, '\n\+$', '', 'g')
     "}}}2
 
-    return s:iconv(ret, 'utf-8', &enc)
+    return split(ret, '\n\zs\n\+')
 endfunction
 
-" s:source.leave() {{{1
-" ================
-function! s:source.leave()
-    syntax clear
-endfunction
-
-" s:source.opened( <query> ) {{{1
-" ==========================
-function! s:source.opened(query)
-    setl nolist
-    setl conceallevel=2
-
-    call s:syntax()
-
-    if g:ref_kotobankej_auto_resize
-        if !exists('w:old_height')
-            let w:old_height = winheight(0)
-        endif
-        let w = winwidth(0)
-        let i = 1
-        let h = 1
-        while h < w:old_height
-            let line = getline(i)
-            if line == ''
-                break
-            endif
-            let h = h + 1 + strdisplaywidth(line) / w
-            let i = i + 1
-        endwhile
-        if h < g:ref_kotobankej_auto_resize_min_size
-            let h = g:ref_kotobankej_auto_resize_min_size
-        elseif h > w:old_height
-            let h = w:old_height
-        endif
-        exe 'resize' h
+" s:get_url( <url> ) {{{1
+" ==================
+function! s:get_url(url)
+    if g:ref_alc_use_webapi
+        return http#get(a:url).content
+    else
+        return ref#system(['curl', '-kLs', a:url]).stdout
     endif
-endfunction
-"}}}1
-
-function! ref#kotobankej#define()
-    return copy(s:source)
-endfunction
-
-" s:encodeURIComponent( <string> ) {{{1
-" ================================
-function! s:encodeURIComponent(str)
-    let ret = ''
-    let len = strlen(a:str)
-    let i = 0
-    while i < len
-        if a:str[i] =~# "[0-9A-Za-z._~!'()*-]"
-            let ret .= a:str[i]
-        elseif a:str[i] == ' '
-            let ret .= '+'
-        else
-            let ret .= printf('%%%02X', char2nr(a:str[i]))
-        endif
-        let i = i + 1
-    endwhile
-    return ret
 endfunction
 
 " s:iconv( <expr>, <from>, <to> ) {{{1
 " ===============================
 function! s:iconv(expr, from, to)
-    if a:from == '' || a:to == '' || a:from ==# a:to
+    if a:from == '' || a:to == '' || a:from ==? a:to
         return a:expr
+    elseif type(a:expr) == type([]) || type(a:expr) == type({})
+        return map(a:expr, 's:iconv(v:val, a:from, a:to)')
     endif
-    let result = iconv(a:expr, a:from, a:to)
-    return result != '' ? result : a:expr
+
+    let ret = iconv(a:expr, a:from, a:to)
+    return ret != '' ? ret : a:expr
 endfunction
 
 " s:syntax() {{{1
 " ==========
 function! s:syntax()
+    setl conceallevel=2
+
     syn match  refKotobankDicName '^.*の解説$'
     syn match  refKotobankBold    '\*\*.\{-}\*\*' contains=refKotobankConceal
     syn match  refKotobankExample '^» .*$'
@@ -217,6 +247,12 @@ function! s:syntax()
     hi def link refKotobankExample  Constant
 endfunction
 "}}}1
+
+if s:source.available() && g:ref_kotobankej_use_cache
+  \ && ref#cache(s:source.name, '_version', [0])[0] < 100
+    call ref#rmcache(s:source.name)
+    call ref#cache(s:source.name, '_version', [s:source.version])
+endif
 
 " s:cpo_save {{{1
 let &cpo = s:cpo_save
