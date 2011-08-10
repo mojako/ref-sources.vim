@@ -25,8 +25,8 @@ if !exists('g:ref_kotobankej_use_cache')
     let g:ref_kotobankej_use_cache = 0
 endif
 
-if !exists('g:ref_kotobankej_use_webapi')
-    let g:ref_kotobankej_use_webapi = globpath(&rtp, 'autoload/http.vim') != ''
+if !exists('g:ref_use_webapi')
+    let g:ref_use_webapi = globpath(&rtp, 'autoload/http.vim') != ''
 endif
 "}}}
 
@@ -38,88 +38,9 @@ function! s:source.available()
     return executable('curl')
 endfunction
 
-" s:source.get_body( <query> ) {{{1
-" ============================
-function! s:source.get_body(query)
-    let q = s:encodeURIComponent(s:iconv(a:query, &enc, 'utf-8'))
-
-    if g:ref_kotobankej_use_cache
-        return s:iconv(self.cache(q, s:func('get_body')), 'utf-8', &enc)
-    else
-        return s:iconv(s:get_body(q), 'utf-8', &enc)
-    endif
-endfunction
-
-" s:source.leave() {{{1
-" ================
-function! s:source.leave()
-    syntax clear
-endfunction
-
-" s:source.opened( <query> ) {{{1
-" ==========================
-function! s:source.opened(query)
-    setl nolist
-
-    call s:syntax()
-
-    if g:ref_kotobankej_auto_resize
-        if !exists('w:old_height')
-            let w:old_height = winheight(0)
-        endif
-        let w = winwidth(0)
-        let i = 1
-        let h = 1
-        while h < w:old_height
-            let line = getline(i)
-            if line == ''
-                break
-            endif
-            let h = h + 1 + strdisplaywidth(line) / w
-            let i = i + 1
-        endwhile
-        if h < g:ref_kotobankej_auto_resize_min_size
-            let h = g:ref_kotobankej_auto_resize_min_size
-        elseif h > w:old_height
-            let h = w:old_height
-        endif
-        exe 'resize' h
-    endif
-endfunction
-"}}}1
-
-function! ref#kotobankej#define()
-    return copy(s:source)
-endfunction
-
-" s:encodeURIComponent( <string> ) {{{1
-" ================================
-function! s:encodeURIComponent(str)
-    let ret = ''
-    let len = strlen(a:str)
-    let i = 0
-    while i < len
-        if a:str[i] =~# "[0-9A-Za-z._~!'()*-]"
-            let ret .= a:str[i]
-        elseif a:str[i] == ' '
-            let ret .= '+'
-        else
-            let ret .= printf('%%%02X', char2nr(a:str[i]))
-        endif
-        let i = i + 1
-    endwhile
-    return ret
-endfunction
-
-" s:func( <function_name> ) {{{1
-" =========================
-function! s:func(name)
-    return function(matchstr(expand('<sfile>'), '<SNR>\d\+_\zefunc$') . a:name)
-endfunction
-
-" s:get_body( <query> ) {{{1
-" =====================
-function! s:get_body(query)
+" s:source.call( <query> ) {{{1
+" ========================
+function! s:source.call(query)
     let url = 'http://kotobank.jp/ejsearch/result?q=' . a:query . '&t=2'
 
     " Webページを取得 {{{2
@@ -152,7 +73,7 @@ function! s:get_body(query)
     let ret = substitute(ret, '<\%(br\|li\)\%(\s[^>]*\)\?>', '\n', 'g')
 
     " <b> タグを置換 {{{2
-    let ret = substitute(ret, '<b>\s*\(.\{-}\)\s*</b>', '**\1**', 'g')
+    let ret = substitute(ret, '<b>\s*\(.\{-}\)\s*</b>', '*\1*', 'g')
 
     " 発音 {{{2
     let ret = substitute(ret, '<span class="hatsuon">', ' ', 'g')
@@ -208,10 +129,92 @@ function! s:get_body(query)
     return split(ret, '\n\zs\n\+')
 endfunction
 
+" s:source.get_body( <query> ) {{{1
+" ============================
+function! s:source.get_body(query)
+    let q = s:encodeURIComponent(s:iconv(a:query, &enc, 'utf-8'))
+
+    if g:ref_kotobankej_use_cache
+        return s:iconv(self.cache(q, self), 'utf-8', &enc)
+    else
+        return s:iconv(self.call(q), 'utf-8', &enc)
+    endif
+endfunction
+
+" s:source.leave() {{{1
+" ================
+function! s:source.leave()
+    syntax clear
+endfunction
+
+" s:source.opened( <query> ) {{{1
+" ==========================
+function! s:source.opened(query)
+    " syntax coloring {{{2
+    syn match  refKotobankDicName '^.*の解説$'
+    syn match  refKotobankBold    '\*.\{-}\*' contains=refKotobankConceal
+    syn match  refKotobankExample '^» .*$'
+
+    syn match  refKotobankConceal '\*' contained conceal transparent
+
+    hi def link refKotobankDicName  Type
+    hi def link refKotobankBold     Identifier
+    hi def link refKotobankExample  Constant
+
+    " 自動リサイズ {{{2
+    if g:ref_kotobankej_auto_resize
+        if !exists('w:old_height')
+            let w:old_height = winheight(0)
+        endif
+        let w = winwidth(0)
+        let i = 1
+        let h = 1
+        while h < w:old_height
+            let line = getline(i)
+            if line == ''
+                break
+            endif
+            let h = h + 1 + strdisplaywidth(line) / w
+            let i = i + 1
+        endwhile
+        if h < g:ref_kotobankej_auto_resize_min_size
+            let h = g:ref_kotobankej_auto_resize_min_size
+        elseif h > w:old_height
+            let h = w:old_height
+        endif
+        exe 'resize' h
+    endif
+    "}}}2
+endfunction
+"}}}1
+
+function! ref#kotobankej#define()
+    return copy(s:source)
+endfunction
+
+" s:encodeURIComponent( <string> ) {{{1
+" ================================
+function! s:encodeURIComponent(str)
+    let ret = ''
+    let len = strlen(a:str)
+    let i = 0
+    while i < len
+        if a:str[i] =~# "[0-9A-Za-z._~!'()*-]"
+            let ret .= a:str[i]
+        elseif a:str[i] == ' '
+            let ret .= '+'
+        else
+            let ret .= printf('%%%02X', char2nr(a:str[i]))
+        endif
+        let i = i + 1
+    endwhile
+    return ret
+endfunction
+
 " s:get_url( <url> ) {{{1
 " ==================
 function! s:get_url(url)
-    if g:ref_alc_use_webapi
+    if g:ref_use_webapi
         return http#get(a:url).content
     else
         return ref#system(['curl', '-kLs', a:url]).stdout
@@ -229,22 +232,6 @@ function! s:iconv(expr, from, to)
 
     let ret = iconv(a:expr, a:from, a:to)
     return ret != '' ? ret : a:expr
-endfunction
-
-" s:syntax() {{{1
-" ==========
-function! s:syntax()
-    setl conceallevel=2
-
-    syn match  refKotobankDicName '^.*の解説$'
-    syn match  refKotobankBold    '\*\*.\{-}\*\*' contains=refKotobankConceal
-    syn match  refKotobankExample '^» .*$'
-
-    syn match  refKotobankConceal '\*' contained conceal transparent
-
-    hi def link refKotobankDicName  Type
-    hi def link refKotobankBold     Identifier
-    hi def link refKotobankExample  Constant
 endfunction
 "}}}1
 

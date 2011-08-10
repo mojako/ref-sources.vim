@@ -53,19 +53,18 @@ let g:ref_kotobank_use_cache = 1
 let g:ref_kotobankej_use_cache = 1
 ```
 
-### webapi-vim を使用しない
+### webapi-vim を使用しない (共通設定)
 
 webapi-vim をインストールしていない場合は、自動で `0`
 に設定されるので、わざわざ設定する必要はありません。
 
 ```vim
-let g:ref_kotobank_use_webapi = 0
-let g:ref_kotobankej_use_webapi = 0
+let g:ref_use_webapi = 0
 ```
 
 TODO
 ----
 
-* 共通の設定オプションをまとめて設定できるようにする(ようにならないかな)
+* 共通の設定オプションをまとめて設定できるようにする
 * [kotobankej] 大量の外字画像をすべて変換できるようにする
 * 収録ソースをもっと増やす
