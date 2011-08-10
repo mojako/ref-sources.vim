@@ -2,7 +2,7 @@
 " File:         autoload/ref/kotobank.vim
 " Author:       mojako <moja.ojj@gmail.com>
 " URL:          https://github.com/mojako/ref-sources.vim
-" Last Change:  2011-08-10
+" Last Change:  2011-08-11
 " ============================================================================
 
 scriptencoding utf-8
@@ -30,7 +30,7 @@ if !exists('g:ref_use_webapi')
 endif
 "}}}
 
-let s:source = {'name': 'kotobank', 'version': 100}
+let s:source = {'name': 'kotobank', 'version': 101}
 
 " s:source.available() {{{1
 " ====================
@@ -65,17 +65,14 @@ function! s:source.call(query)
     let ret = substitute(ret, '<li class="word_open">.\{-}</li>', '', 'g')
 
     " <br>, <li> タグを改行に変換 {{{2
-    let ret = substitute(ret, '<br />&nbsp;<br />', '\n', 'g') " 微調整
     let ret = substitute(ret, '<\%(br\|li\)\%(\s[^>]*\)\?>', '\n', 'g')
 
     " <b> タグを置換 {{{2
+    let ret = substitute(ret, '\n\zs<b>\s*\(.\{-}\)\s*</b>\s*', '*\1* ', 'g')
     let ret = substitute(ret, '<b>\s*\(.\{-}\)\s*</b>', '*\1*', 'g')
 
     " すべてのタグを削除 {{{2
     let ret = substitute(ret, '<[^>]*>', '', 'g')
-
-    " 微調整 {{{2
-    let ret = substitute(ret, '\n\*\*.\{-}\*\*\zs\s*', '\t', 'g')
 
     " 文字参照を置換 {{{2
     let ret = substitute(ret, '&#\(\d\+\);', '\=nr2char(submatch(1))', 'g')
@@ -120,13 +117,21 @@ endfunction
 " ==========================
 function! s:source.opened(query)
     " syntax coloring {{{2
-    syn match  refKotobankDicName '^.*の解説$'
-    syn match  refKotobankBold    '\*.\{-}\*' contains=refKotobankConceal
+    syn match   refKotobankDicName  '^.*の解説$'
+    syn match   refKotobankBold     '\*.\{-}\*' contains=refKotobankConceal
+    syn match   refKotobankTitle    '\*.\{-}\*\ze\n　'
+      \ contains=refKotobankConceal
+    syn match   refKotobankKana     '([ぁ-ん]\+)'
+    syn match   refKotobankLabel    '\[.\{-}\]'
+    syn match   refKotobankLabel    '［.\{-}］'
 
-    syn match  refKotobankConceal '\*' contained conceal transparent
+    syn match   refKotobankConceal  '\*' contained conceal transparent
 
     hi def link refKotobankDicName  Type
+    hi def link refKotobankTitle    Title
     hi def link refKotobankBold     Identifier
+    hi def link refKotobankKana     Comment
+    hi def link refKotobankLabel    Constant
 
     " 自動リサイズ {{{2
     if g:ref_kotobank_auto_resize
@@ -203,7 +208,7 @@ endfunction
 "}}}1
 
 if s:source.available() && g:ref_kotobank_use_cache
-  \ && ref#cache(s:source.name, '_version', [0])[0] < 100
+  \ && ref#cache(s:source.name, '_version', [0])[0] < 101
     call ref#rmcache(s:source.name)
     call ref#cache(s:source.name, '_version', [s:source.version])
 endif
