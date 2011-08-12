@@ -23,6 +23,7 @@ ref-sources.vim
 収録ソース
 ----------
 
+* jquery ([jQAPI](http://jqapi.com/), 実験的)
 * kotobank ([コトバンク](http://kotobank.jp/))
 * kotobankej ([コトバンク 英和・和英検索](http://kotobank.jp/))
 
@@ -31,7 +32,25 @@ ref-sources.vim
 
 お好みに合わせて、`~/.vimrc` などに追加してください。
 
-### 自動リサイズ機能を有効にする
+### ローカルに保存されたドキュメントを参照する (jquery)
+
+[jQAPI](http://jqapi.com/) から HTML Version をダウンロードし、
+解凍先のディレクトリを、以下のように設定してください。
+
+```vim
+let g:ref_jquery_doc_path = 'path/to/jqapi-latest'
+```
+
+このオプションを設定すると、ページのロードは高速化できますが、
+初回検索時のもたつきは改善されません。
+
+これは、初回検索時にインデックスを作成している為で、これを
+高速化するには、キャッシュを有効にしてください。
+
+なお、キャッシュ・データはローカル / オンライン共通なので、
+途中でこのオプションを切り替えても、問題ありません。
+
+### 自動リサイズ機能を有効にする (kotobank, kotobankej)
 
 結果に合わせて、開かれるウインドウの縦サイズを調節します。
 
@@ -49,6 +68,7 @@ let g:ref_kotobankej_auto_resize = 1
 ### キャッシュを有効にする
 
 ```vim
+let g:ref_jquery_use_cache = 1
 let g:ref_kotobank_use_cache = 1
 let g:ref_kotobankej_use_cache = 1
 ```

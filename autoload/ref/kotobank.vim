@@ -2,7 +2,7 @@
 " File:         autoload/ref/kotobank.vim
 " Author:       mojako <moja.ojj@gmail.com>
 " URL:          https://github.com/mojako/ref-sources.vim
-" Last Change:  2011-08-11
+" Last Change:  2011-08-12
 " ============================================================================
 
 scriptencoding utf-8
@@ -41,9 +41,8 @@ endfunction
 " s:source.call( <query> ) {{{1
 " ========================
 function! s:source.call(query)
-    let url = 'http://kotobank.jp/search/result?q=' . a:query
-
     " Webページを取得 {{{2
+    let url = 'http://kotobank.jp/search/result?q=' . a:query
     let ret = s:get_url(url)
 
     " 一致する結果がないとき、空の結果を返す {{{2
@@ -64,10 +63,10 @@ function! s:source.call(query)
     let ret = substitute(ret, '<li class="source">.\{-}</li>', '', 'g')
     let ret = substitute(ret, '<li class="word_open">.\{-}</li>', '', 'g')
 
-    " <br>, <li> タグを改行に変換 {{{2
+    " <br>, <li>タグを改行に変換 {{{2
     let ret = substitute(ret, '<\%(br\|li\)\%(\s[^>]*\)\?>', '\n', 'g')
 
-    " <b> タグを置換 {{{2
+    " <b>タグを置換 {{{2
     let ret = substitute(ret, '\n\zs<b>\s*\(.\{-}\)\s*</b>\s*', '*\1* ', 'g')
     let ret = substitute(ret, '<b>\s*\(.\{-}\)\s*</b>', '*\1*', 'g')
 
@@ -89,7 +88,7 @@ function! s:source.call(query)
     " 空行を詰める {{{2
     let ret = substitute(ret, '\s\+\n', '\n', 'g')
     let ret = substitute(ret, '^\n\+', '', 'g')
-    let ret = substitute(ret, '\n\+$', '', 'g')
+    let ret = substitute(ret, '\n\+\s*$', '', 'g')
     "}}}2
 
     return split(ret, '\n\zs\n\+')
