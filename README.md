@@ -6,6 +6,8 @@ ref-sources.vim
 [ref-alc.vim][git:ref-alc.vim] と同じく、データの取得に curl
 (もしくは、[webapi-vim][git:webapi-vim]) を使い、HTML を整形・表示します。
 
+- 2011-08-12: jquery に対応
+
 [git:vim-ref]:      https://github.com/thinca/vim-ref
 [git:ref-alc.vim]:  https://github.com/mojako/ref-alc.vim
 [git:webapi-vim]:   https://github.com/mattn/webapi-vim
@@ -48,7 +50,7 @@ let g:ref_jquery_doc_path = 'path/to/jqapi-latest'
 高速化するには、キャッシュを有効にしてください。
 
 なお、キャッシュ・データはローカル / オンライン共通なので、
-途中でこのオプションを切り替えても、問題ありません。
+途中でこのオプションを切り替えても問題ありません。
 
 ### 自動リサイズ機能を有効にする (kotobank, kotobankej)
 

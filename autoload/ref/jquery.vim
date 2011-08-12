@@ -2,7 +2,7 @@
 " File:         autoload/ref/jquery.vim
 " Author:       mojako <moja.ojj@gmail.com>
 " URL:          https://github.com/mojako/ref-sources.vim
-" Last Change:  2011-08-12
+" Last Change:  2011-08-13
 " ============================================================================
 
 scriptencoding utf-8
@@ -247,25 +247,6 @@ function! ref#jquery#define()
     return copy(s:source)
 endfunction
 
-" s:encodeURIComponent( <string> ) {{{1
-" ================================
-function! s:encodeURIComponent(str)
-    let ret = ''
-    let len = strlen(a:str)
-    let i = 0
-    while i < len
-        if a:str[i] =~# "[0-9A-Za-z._~!'()*-]"
-            let ret .= a:str[i]
-        elseif a:str[i] == ' '
-            let ret .= '+'
-        else
-            let ret .= printf('%%%02X', char2nr(a:str[i]))
-        endif
-        let i = i + 1
-    endwhile
-    return ret
-endfunction
-
 " s:get_path( <path> ) {{{1
 " ====================
 function! s:get_path(path)
@@ -283,20 +264,6 @@ function! s:get_url(url)
         return ref#system(['curl', '-kLs', a:url]).stdout
     endif
 endfunction
-
-" s:iconv( <expr>, <from>, <to> ) {{{1
-" ===============================
-function! s:iconv(expr, from, to)
-    if a:from == '' || a:to == '' || a:from ==? a:to
-        return a:expr
-    elseif type(a:expr) == type([]) || type(a:expr) == type({})
-        return map(a:expr, 's:iconv(v:val, a:from, a:to)')
-    endif
-
-    let ret = iconv(a:expr, a:from, a:to)
-    return ret != '' ? ret : a:expr
-endfunction
-
 "}}}1
 
 if s:source.available() && g:ref_jquery_use_cache
