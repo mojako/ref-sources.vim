@@ -2,7 +2,7 @@
 " File:         autoload/ref/kotobank.vim
 " Author:       mojako <moja.ojj@gmail.com>
 " URL:          https://github.com/mojako/ref-sources.vim
-" Last Change:  2011-08-12
+" Last Change:  2011-08-13
 " ============================================================================
 
 scriptencoding utf-8
@@ -30,7 +30,7 @@ if !exists('g:ref_use_webapi')
 endif
 "}}}
 
-let s:source = {'name': 'kotobank', 'version': 101}
+let s:source = {'name': 'kotobank', 'version': 102}
 
 " s:source.available() {{{1
 " ====================
@@ -42,7 +42,8 @@ endfunction
 " ========================
 function! s:source.call(query)
     " Webページを取得 {{{2
-    let url = 'http://kotobank.jp/search/result?q=' . a:query
+    let url = 'http://kotobank.jp/search/result?q='
+      \ . s:encodeURIComponent(a:query)
     let ret = s:get_url(url)
 
     " 一致する結果がないとき、空の結果を返す {{{2
@@ -97,7 +98,7 @@ endfunction
 " s:source.get_body( <query> ) {{{1
 " ============================
 function! s:source.get_body(query)
-    let q = s:encodeURIComponent(s:iconv(a:query, &enc, 'utf-8'))
+    let q = s:iconv(a:query, &enc, 'utf-8')
 
     if g:ref_kotobank_use_cache
         return s:iconv(self.cache(q, self), 'utf-8', &enc)
@@ -207,7 +208,7 @@ endfunction
 "}}}1
 
 if s:source.available() && g:ref_kotobank_use_cache
-  \ && ref#cache(s:source.name, '_version', [0])[0] < 101
+  \ && ref#cache(s:source.name, '_version', [0])[0] < 102
     call ref#rmcache(s:source.name)
     call ref#cache(s:source.name, '_version', [s:source.version])
 endif
