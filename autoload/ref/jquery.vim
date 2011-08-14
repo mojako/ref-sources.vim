@@ -2,7 +2,7 @@
 " File:         autoload/ref/jquery.vim
 " Author:       mojako <moja.ojj@gmail.com>
 " URL:          https://github.com/mojako/ref-sources.vim
-" Last Change:  2011-08-13
+" Last Change:  2011-08-14
 " ============================================================================
 
 scriptencoding utf-8
@@ -31,7 +31,7 @@ let s:source = {'name': 'jquery', 'version': 100}
 " s:source.available() {{{1
 " ====================
 function! s:source.available()
-    return executable('curl')
+    return executable('curl') || isdirectory(g:ref_jquery_doc_path)
 endfunction
 
 " s:source.call( <query> ) {{{1
@@ -121,6 +121,22 @@ function s:source.call(query)
     return split(ret, '\n\zs\n\+')
 endfunction
 
+" s:source.complete( <query> ) {{{1
+" ============================
+function! s:source.complete(query)
+    let query = self.normalize(a:query)
+    let index = self.index()
+
+    let ret = []
+    for name in keys(index)
+        if name =~? query
+            call add(ret, name)
+        endif
+    endfor
+
+    return sort(ret)
+endfunction
+
 " s:source.get_body( <query> ) {{{1
 " ============================
 function! s:source.get_body(query)
@@ -151,22 +167,6 @@ function! s:source.get_body(query)
     endif
 
     return {'body': sort(match), 'query': a:query . '?'}
-endfunction
-
-" s:source.complete( <query> ) {{{1
-" ============================
-function! s:source.complete(query)
-    let query = self.normalize(a:query)
-    let index = self.index()
-
-    let ret = []
-    for name in keys(index)
-        if name =~? query
-            call add(ret, name)
-        endif
-    endfor
-
-    return sort(ret)
 endfunction
 
 " s:source.get_keyword() {{{1
@@ -233,8 +233,8 @@ function! s:source.opened(query)
     else
         syn include @refJavascript syntax/javascript.vim
     endif
-    syn region  refJquerySampleCode start='```' end='```' keepend
-        \ contains=@refJavascript,refJqueryConceal
+    syn region  refJquerySampleCode start='^```$' end='^```$' keepend
+      \ contains=@refJavascript,refJqueryConceal
 
     hi def link refJqueryOptionName Type
     hi def link refJqueryBold       Identifier
