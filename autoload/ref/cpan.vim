@@ -2,7 +2,7 @@
 " File:         autoload/ref/cpan.vim
 " Author:       mojako <moja.ojj@gmail.com>
 " URL:          https://github.com/mojako/ref-sources.vim
-" Last Change:  2011-08-14
+" Last Change:  2011-08-16
 " ============================================================================
 
 scriptencoding utf-8
@@ -26,7 +26,7 @@ if !exists('g:ref_use_webapi')
 endif
 "}}}
 
-let s:source = {'name': 'cpan', 'version': 100}
+let s:source = {'name': 'cpan', 'version': 101}
 
 " s:source.available() {{{1
 " ====================
@@ -43,23 +43,21 @@ function s:source.call(query)
 
     " 埋め込まれたPOD部分を抽出 {{{2
     let ret = substitute(ret, '^.\{-}\ze\n=', '', '')
-    let ret = substitute(ret, '\n=cut\n.\{-}\ze\n=', '', 'g')
-    let ret = substitute(ret, '\n=cut\n.\{-}$', '', '')
-
-    " インデントされた要素を置換 {{{2
-    let ret = substitute(ret, '\n[\t ].\{-}\n\ze\n\%([\t ]\)\@!',
-      \ '\n```\0```\n', 'g')
+    let ret = substitute(ret, '\n=cut.\{-}\ze\n=', '', 'g')
+    let ret = substitute(ret, '\n=cut.\{-}$', '', '')
 
     " パラグラフ要素を置換 {{{2
     let ret = substitute(ret, '\n\zs=head1\s\+\(.\{-}\)\ze\n', '# \1', 'g')
     let ret = substitute(ret, '\n\zs=head2\s\+\(.\{-}\)\ze\n', '## \1', 'g')
 
-    let ret = substitute(ret, '\n=over \d\+\n', '', 'g')
+    let ret = substitute(ret, '\n=over\%( \d\+\)\?\n', '', 'g')
     let ret = substitute(ret, '\n=back\n', '', 'g')
     let ret = substitute(ret, '\n\zs=item ', '  ', 'g')
 
     " ブロック要素を置換 {{{2
+    let ret = substitute(ret, 'B<<\(.\{-}\)>>', '**\1**', 'g')
     let ret = substitute(ret, 'B<\(.\{-}\)>', '**\1**', 'g')
+    let ret = substitute(ret, 'I<<\(.\{-}\)>>', '*\1*', 'g')
     let ret = substitute(ret, 'I<\(.\{-}\)>', '*\1*', 'g')
     let ret = substitute(ret, 'C<< \(.\{-}\) >>', '`\1`', 'g')
     let ret = substitute(ret, 'C<\(.\{-}\)>', '`\1`', 'g')
@@ -81,6 +79,20 @@ function s:source.call(query)
     "}}}2
 
     return [ret]
+endfunction
+
+" s:source.complete( <query> ) {{{1
+" ============================
+function! s:source.complete(query)
+    let q = s:iconv(a:query, &enc, 'utf-8')
+
+    let result = self.search(q)
+    if type(result) == type('')
+        return [result]
+    else
+        return sort(filter(keys(result), 'v:val =~? ''^' . q . ''''))
+          \ + sort(filter(keys(result), 'v:val !~? ''^' . q . ''''))
+    endif
 endfunction
 
 " s:source.get_body( <query> ) {{{1
@@ -105,6 +117,10 @@ function! s:source.get_body(query)
             return s:iconv(self.call(result), 'utf-8', &enc)
         endif
     else
+        if empty(result)
+            return ''
+        endif
+
         return {'body': sort(keys(result)), 'query': a:query . '?'}
     endif
 endfunction
@@ -155,16 +171,21 @@ endfunction
 function! s:source.opened(query)
     " syntax coloring {{{2
     syn match   refCpanTitle    '^#.*$'
-    syn match   refCpanItalic   '\*.\{-}\*' contains=refCpanConceal
-    syn match   refCpanBold     '\*\*.\{-}\*\*' contains=refCpanConceal
-    syn match   refCpanCode     '`.\{-}`' contains=refCpanConceal
+    syn match   refCpanItalic   '\*.\{-}\*' contains=refCpanConcealAsterisk
+    syn match   refCpanBold     '\*\*.\{-}\*\*' contains=refCpanConcealAsterisk
+    syn match   refCpanCode     '`.\{-}`' contains=refCpanConcealBackQuote
 
-    syn match   refCpanConceal  '\*' contained conceal transparent
-    syn match   refCpanConceal  '\`' contained conceal transparent
+    syn match   refCpanConcealAsterisk  '\*' contained conceal transparent
+    syn match   refCpanConcealBackQuote '`' contained conceal transparent
 
     syn include @refPerl syntax/perl.vim
-    syn region  refCpanSampleCode start='^```$' end='^```$'
-      \ keepend contains=@refPerl
+    syn region  refCpanSampleCode
+      \ start='^[\t ]\+\%([\t* ]\)\@!' end='^$'
+      \ contains=@refPerl
+
+    " syn region  refCpanSampleCode
+    "   \ start='^[\t ]\+\%([\t* ]\)\@!' end='\n\n\%([\t ]\)\@!'
+    "   \ contains=@refPerl
 
     hi def link refCpanTitle    Title
     hi def link refCpanBold     Identifier
@@ -181,11 +202,17 @@ function! s:source.search(query)
       \ . '&n=' . g:ref_cpan_search_page_size
     let html = s:get_url(url)
 
+    if !exists('self._index')
+        let self._index = {}
+    endif
+
     for item in split(html, '<!--item-->')[1:]
         let name = matchstr(item, '<b>\zs.\{-}\ze</b>')
-        let link = matchstr(item, '<a href="\zs.\{-}\ze">')
-        let self._index[name] = substitute(link, '^/\~\([^/]\+\)',
-          \ '\=toupper(submatch(1))', '')
+        let link = matchstr(item, '<a href="\zs.\{-}\.pm\ze">')
+        if link != ''
+            let self._index[name] = substitute(link, '^/\~\([^/]\+\)',
+              \ '\=toupper(submatch(1))', '')
+        endif
     endfor
 
     if g:ref_cpan_use_cache
@@ -251,7 +278,7 @@ endfunction
 "}}}1
 
 if s:source.available() && g:ref_cpan_use_cache
-  \ && ref#cache(s:source.name, '_version', [0])[0] < 100
+  \ && ref#cache(s:source.name, '_version', [0])[0] < 101
     call ref#rmcache(s:source.name)
     call ref#cache(s:source.name, '_version', [s:source.version])
 endif
