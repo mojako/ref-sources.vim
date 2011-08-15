@@ -88,7 +88,7 @@ function! s:source.complete(query)
 
     let result = self.search(q)
     if type(result) == type('')
-        return [result]
+        return []
     else
         return sort(filter(keys(result), 'v:val =~? ''^' . q . ''''))
           \ + sort(filter(keys(result), 'v:val !~? ''^' . q . ''''))
