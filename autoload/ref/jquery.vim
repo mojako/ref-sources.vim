@@ -2,7 +2,7 @@
 " File:         autoload/ref/jquery.vim
 " Author:       mojako <moja.ojj@gmail.com>
 " URL:          https://github.com/mojako/ref-sources.vim
-" Last Change:  2011-08-14
+" Last Change:  2011-08-16
 " ============================================================================
 
 scriptencoding utf-8
@@ -134,7 +134,7 @@ function! s:source.complete(query)
         endif
     endfor
 
-    return sort(ret)
+    return sort(filter(ret, 'v:val =~? ''\V' . query . ''''))
 endfunction
 
 " s:source.get_body( <query> ) {{{1
