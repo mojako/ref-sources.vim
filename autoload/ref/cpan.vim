@@ -84,45 +84,45 @@ endfunction
 " s:source.complete( <query> ) {{{1
 " ============================
 function! s:source.complete(query)
-    let q = s:iconv(a:query, &enc, 'utf-8')
+    let query = s:iconv(a:query, &enc, 'utf-8')
 
-    let result = self.search(q)
-    if type(result) == type('')
-        return []
-    else
-        return sort(filter(keys(result), 'v:val =~? ''^' . q . ''''))
-          \ + sort(filter(keys(result), 'v:val !~? ''^' . q . ''''))
-    endif
+    let ret = self.search(query)
+    return filter(ret, 'v:val =~? ''\V' . query . '''')
 endfunction
 
 " s:source.get_body( <query> ) {{{1
 " ============================
 function! s:source.get_body(query)
-    let q = s:iconv(a:query, &enc, 'utf-8')
+    let query = s:iconv(a:query, &enc, 'utf-8')
 
-    let index = self.index(q)
+    let index = self.index(query)
     if index != ''
-        if g:ref_cpan_use_cache
-            return s:iconv(self.cache(index, self), 'utf-8', &enc)
-        else
-            return s:iconv(self.call(index), 'utf-8', &enc)
-        endif
+        return s:iconv(g:ref_cpan_use_cache
+          \ ? self.cache(index, self) : self.call(index), 'utf-8', &enc)
     endif
 
-    let result = self.search(q)
-    if type(result) == type('')
-        if g:ref_cpan_use_cache
-            return s:iconv(self.cache(result, self), 'utf-8', &enc)
-        else
-            return s:iconv(self.call(result), 'utf-8', &enc)
-        endif
-    else
-        if empty(result)
-            return ''
-        endif
+    let result = self.search(query)
 
-        return {'body': sort(keys(result)), 'query': a:query . '?'}
+    if len(result) == 1
+        return {
+          \ 'body': s:iconv(g:ref_cpan_use_cache
+          \     ? self.cache(self._index[result[0]], self)
+          \     : self.call(self._index[result[0]]), 'utf-8', &enc),
+          \ 'query': result[0],
+          \ }
     endif
+
+    let index = index(result, query, 0, 1)
+    if index >= 0
+        return {
+          \ 'body': s:iconv(g:ref_cpan_use_cache
+          \     ? self.cache(self._index[result[index]], self)
+          \     : self.call(self._index[result[index]]), 'utf-8', &enc),
+          \ 'query': result[index],
+          \ }
+    endif
+
+    return {'body': result, 'query': query . '?'}
 endfunction
 
 " s:source.get_keyword() {{{1
@@ -206,12 +206,14 @@ function! s:source.search(query)
         let self._index = {}
     endif
 
+    let ret = []
     for item in split(html, '<!--item-->')[1:]
         let name = matchstr(item, '<b>\zs.\{-}\ze</b>')
-        let link = matchstr(item, '<a href="\zs.\{-}\.pm\ze">')
+        let link = matchstr(item, '<a href="\zs.\{-}\.\%(pm\|pod\)\ze">')
         if link != ''
             let self._index[name] = substitute(link, '^/\~\([^/]\+\)',
               \ '\=toupper(submatch(1))', '')
+            call add(ret, name)
         endif
     endfor
 
@@ -224,8 +226,7 @@ function! s:source.search(query)
         call self.cache('_index', array, 1)
     endif
 
-    return has_key(self._index, a:query) ? self._index[a:query]
-      \ : filter(self._index, 'v:key =~? a:query')
+    return ret
 endfunction
 "}}}1
 
@@ -251,6 +252,7 @@ function! s:encodeURIComponent(str)
     endwhile
     return ret
 endfunction
+
 
 " s:get_url( <url> ) {{{1
 " ==================
