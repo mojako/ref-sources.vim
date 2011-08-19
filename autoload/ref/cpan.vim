@@ -2,7 +2,7 @@
 " File:         autoload/ref/cpan.vim
 " Author:       mojako <moja.ojj@gmail.com>
 " URL:          https://github.com/mojako/ref-sources.vim
-" Last Change:  2011-08-16
+" Last Change:  2011-08-19
 " ============================================================================
 
 scriptencoding utf-8
@@ -17,12 +17,12 @@ if !exists('g:ref_cpan_search_page_size')
     let g:ref_cpan_search_page_size = 20
 endif
 
-if !exists('g:ref_cpan_use_cache')
+if !exists('g:ref_cpan_use_cache') && !exists('g:ref_use_cache')
     let g:ref_cpan_use_cache = 0
 endif
 
-if !exists('g:ref_use_webapi')
-    let g:ref_use_webapi = globpath(&rtp, 'autoload/http.vim') != ''
+if !exists('g:ref_cpan_use_webapi') && !exists('g:ref_use_webapi')
+    let g:ref_cpan_use_webapi = globpath(&rtp, 'autoload/http.vim') != ''
 endif
 "}}}
 
@@ -97,7 +97,7 @@ function! s:source.get_body(query)
 
     let index = self.index(query)
     if index != ''
-        return s:iconv(g:ref_cpan_use_cache
+        return s:iconv(s:get_option('use_cache')
           \ ? self.cache(index, self) : self.call(index), 'utf-8', &enc)
     endif
 
@@ -105,7 +105,7 @@ function! s:source.get_body(query)
 
     if len(result) == 1
         return {
-          \ 'body': s:iconv(g:ref_cpan_use_cache
+          \ 'body': s:iconv(s:get_option('use_cache')
           \     ? self.cache(self._index[result[0]], self)
           \     : self.call(self._index[result[0]]), 'utf-8', &enc),
           \ 'query': result[0],
@@ -115,7 +115,7 @@ function! s:source.get_body(query)
     let index = index(result, query, 0, 1)
     if index >= 0
         return {
-          \ 'body': s:iconv(g:ref_cpan_use_cache
+          \ 'body': s:iconv(s:get_option('use_cache')
           \     ? self.cache(self._index[result[index]], self)
           \     : self.call(self._index[result[index]]), 'utf-8', &enc),
           \ 'query': result[index],
@@ -141,7 +141,7 @@ function s:source.index(...)
     if !exists('self._index')
         let self._index = {}
 
-        if g:ref_cpan_use_cache
+        if s:get_option('use_cache')
             let array = self.cache('_index', [])
 
             let len = len(array)
@@ -217,7 +217,7 @@ function! s:source.search(query)
         endif
     endfor
 
-    if g:ref_cpan_use_cache
+    if s:get_option('use_cache')
         let array = []
         for [key, value] in items(self._index)
             call add(array, key)
@@ -253,11 +253,18 @@ function! s:encodeURIComponent(str)
     return ret
 endfunction
 
+" s:get_option( <option_name> ) {{{1
+" =============================
+function! s:get_option(optname)
+    return exists('g:ref_' . s:source.name . '_' . a:optname)
+      \ ? eval('g:ref_' . s:source.name . '_' . a:optname)
+      \ : exists('g:ref_' . a:optname) ? eval('g:ref_' . a:optname) : 0
+endfunction
 
 " s:get_url( <url> ) {{{1
 " ==================
 function! s:get_url(url)
-    if g:ref_use_webapi
+    if s:get_option('use_webapi')
         return http#get(a:url).content
     else
         return ref#system(['curl', '-kLs', a:url]).stdout
@@ -276,10 +283,9 @@ function! s:iconv(expr, from, to)
     let ret = iconv(a:expr, a:from, a:to)
     return ret != '' ? ret : a:expr
 endfunction
-
 "}}}1
 
-if s:source.available() && g:ref_cpan_use_cache
+if s:source.available() && s:get_option('use_cache')
   \ && ref#cache(s:source.name, '_version', [0])[0] < 101
     call ref#rmcache(s:source.name)
     call ref#cache(s:source.name, '_version', [s:source.version])

@@ -2,7 +2,7 @@
 " File:         autoload/ref/jquery.vim
 " Author:       mojako <moja.ojj@gmail.com>
 " URL:          https://github.com/mojako/ref-sources.vim
-" Last Change:  2011-08-16
+" Last Change:  2011-08-19
 " ============================================================================
 
 scriptencoding utf-8
@@ -17,16 +17,16 @@ if !exists('g:ref_jquery_doc_path')
     let g:ref_jquery_doc_path = ''
 endif
 
-if !exists('g:ref_jquery_use_cache')
+if !exists('g:ref_jquery_use_cache') && !exists('g:ref_use_cache')
     let g:ref_jquery_use_cache = 0
 endif
 
-if !exists('g:ref_use_webapi')
-    let g:ref_use_webapi = globpath(&rtp, 'autoload/http.vim') != ''
+if !exists('g:ref_jquery_use_webapi') && !exists('g:ref_use_webapi')
+    let g:ref_jquery_use_webapi = globpath(&rtp, 'autoload/http.vim') != ''
 endif
 "}}}
 
-let s:source = {'name': 'jquery', 'version': 100}
+let s:source = {'name': 'jquery', 'version': 101}
 
 " s:source.available() {{{1
 " ====================
@@ -38,11 +38,11 @@ endfunction
 " ========================
 function s:source.call(query)
     if a:query ==# '_index'
-        if g:ref_jquery_doc_path
-            let html = join(fileread(
-              \ g:ref_jquery_doc_path . s:get_path('/navigation.html')), '\n')
-        else
+        if empty(g:ref_jquery_doc_path)
             let html = s:get_url('http://jqapi.com/navigation.html')
+        else
+            let html = join(readfile(
+              \ g:ref_jquery_doc_path . s:get_path('/navigation.html')), "\n")
         endif
 
         let ret = []
@@ -56,12 +56,12 @@ function s:source.call(query)
     endif
 
     " Webページを取得 {{{2
-    if g:ref_jquery_doc_path
-        let ret = join(fileread(
-              \ g:ref_jquery_doc_path . s:get_path(a:query)), '\n')
-    else
+    if empty(g:ref_jquery_doc_path)
         let url = 'http://jqapi.com/' . a:query
         let ret = s:get_url(url)
+    else
+        let ret = join(readfile(
+              \ g:ref_jquery_doc_path . s:get_path('/' . a:query)), "\n")
     endif
 
     " 改行とタブを削除 {{{2
@@ -146,7 +146,7 @@ function! s:source.get_body(query)
     for [key, value] in items(index)
         if key ==? a:query || substitute(key, '()\| .*', '', 'g') ==? a:query
             return {
-              \ 'body': g:ref_jquery_use_cache
+              \ 'body': s:get_option('use_cache')
               \     ? self.cache(value, self)
               \     : self.call(value),
               \ 'query': key
@@ -159,7 +159,7 @@ function! s:source.get_body(query)
 
     if len(match) == 1
         return {
-              \ 'body': g:ref_jquery_use_cache
+              \ 'body': s:get_option('use_cache')
               \     ? self.cache(index[match[0]], self)
               \     : self.call(index[match[0]]),
               \ 'query': match[0]
@@ -187,7 +187,7 @@ endfunction
 " ================
 function s:source.index()
     if !exists('self._index')
-        if g:ref_jquery_use_cache
+        if s:get_option('use_cache')
             let array = self.cache('_index', self)
         else
             let array = self.call('_index')
@@ -255,10 +255,18 @@ function! s:get_path(path)
       \ : a:path
 endfunction
 
+" s:get_option( <option_name> ) {{{1
+" =============================
+function! s:get_option(optname)
+    return exists('g:ref_' . s:source.name . '_' . a:optname)
+      \ ? eval('g:ref_' . s:source.name . '_' . a:optname)
+      \ : exists('g:ref_' . a:optname) ? eval('g:ref_' . a:optname) : 0
+endfunction
+
 " s:get_url( <url> ) {{{1
 " ==================
 function! s:get_url(url)
-    if g:ref_use_webapi
+    if s:get_option('use_webapi')
         return http#get(a:url).content
     else
         return ref#system(['curl', '-kLs', a:url]).stdout
@@ -266,7 +274,7 @@ function! s:get_url(url)
 endfunction
 "}}}1
 
-if s:source.available() && g:ref_jquery_use_cache
+if s:source.available() && s:get_option('use_cache')
   \ && ref#cache(s:source.name, '_version', [0])[0] < 100
     call ref#rmcache(s:source.name)
     call ref#cache(s:source.name, '_version', [s:source.version])

@@ -2,7 +2,7 @@
 " File:         autoload/ref/kotobankej.vim
 " Author:       mojako <moja.ojj@gmail.com>
 " URL:          https://github.com/mojako/ref-sources.vim
-" Last Change:  2011-08-13
+" Last Change:  2011-08-19
 " ============================================================================
 
 scriptencoding utf-8
@@ -13,20 +13,21 @@ set cpo&vim
 "}}}
 
 " options {{{1
-if !exists('g:ref_kotobankej_auto_resize')
+if !exists('g:ref_kotobankej_auto_resize') && !exists('g:ref_auto_resize')
     let g:ref_kotobankej_auto_resize = 0
 endif
 
 if !exists('g:ref_kotobankej_auto_resize_min_size')
+  \ && !exists('g:ref_auto_resize_min_size')
     let g:ref_kotobankej_auto_resize_min_size = 10
 endif
 
-if !exists('g:ref_kotobankej_use_cache')
+if !exists('g:ref_kotobankej_use_cache') && !exists('g:ref_use_cache')
     let g:ref_kotobankej_use_cache = 0
 endif
 
-if !exists('g:ref_use_webapi')
-    let g:ref_use_webapi = globpath(&rtp, 'autoload/http.vim') != ''
+if !exists('g:ref_kotobankej_use_webapi') && !exists('g:ref_use_webapi')
+    let g:ref_kotobankej_use_webapi = globpath(&rtp, 'autoload/http.vim') != ''
 endif
 "}}}
 
@@ -131,12 +132,12 @@ endfunction
 " s:source.get_body( <query> ) {{{1
 " ============================
 function! s:source.get_body(query)
-    let q = s:iconv(a:query, &enc, 'utf-8')
+    let query = s:iconv(a:query, &enc, 'utf-8')
 
-    if g:ref_kotobankej_use_cache
-        return s:iconv(self.cache(q, self), 'utf-8', &enc)
+    if s:get_option('use_cache')
+        return s:iconv(self.cache(query, self), 'utf-8', &enc)
     else
-        return s:iconv(self.call(q), 'utf-8', &enc)
+        return s:iconv(self.call(query), 'utf-8', &enc)
     endif
 endfunction
 
@@ -176,7 +177,7 @@ function! s:source.opened(query)
     hi def link refKotobankExample  Statement
 
     " 自動リサイズ {{{2
-    if g:ref_kotobankej_auto_resize
+    if s:get_option('auto_resize')
         if !exists('w:old_height')
             let w:old_height = winheight(0)
         endif
@@ -191,12 +192,20 @@ function! s:source.opened(query)
             let h = h + 1 + strdisplaywidth(line) / w
             let i = i + 1
         endwhile
-        if h < g:ref_kotobankej_auto_resize_min_size
-            let h = g:ref_kotobankej_auto_resize_min_size
+        if h < s:get_option('auto_resize_min_size')
+            let h = s:get_option('auto_resize_min_size')
         elseif h > w:old_height
             let h = w:old_height
         endif
         exe 'resize' h
+
+        augroup RestoreRefWindowSize
+            autocmd! FileType ref-* if exists('w:old_height') |
+              \     exe 'resize' w:old_height |
+              \     unlet w:old_height |
+              \     augroup! RestoreRefWindowSize |
+              \ endif
+        augroup END
     endif
     "}}}2
 endfunction
@@ -225,10 +234,18 @@ function! s:encodeURIComponent(str)
     return ret
 endfunction
 
+" s:get_option( <option_name> ) {{{1
+" =============================
+function! s:get_option(optname)
+    return exists('g:ref_' . s:source.name . '_' . a:optname)
+      \ ? eval('g:ref_' . s:source.name . '_' . a:optname)
+      \ : exists('g:ref_' . a:optname) ? eval('g:ref_' . a:optname) : 0
+endfunction
+
 " s:get_url( <url> ) {{{1
 " ==================
 function! s:get_url(url)
-    if g:ref_use_webapi
+    if s:get_option('use_webapi')
         return http#get(a:url).content
     else
         return ref#system(['curl', '-kLs', a:url]).stdout
@@ -249,7 +266,7 @@ function! s:iconv(expr, from, to)
 endfunction
 "}}}1
 
-if s:source.available() && g:ref_kotobankej_use_cache
+if s:source.available() && s:get_option('use_cache')
   \ && ref#cache(s:source.name, '_version', [0])[0] < 102
     call ref#rmcache(s:source.name)
     call ref#cache(s:source.name, '_version', [s:source.version])
