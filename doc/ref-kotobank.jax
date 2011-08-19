@@ -1,0 +1,78 @@
+*ref-kotobank.txt*	コトバンクで検索する為のref用ソース
+
+Version: 1.0.2
+Author:  mojako <moja.ojj@gmail.com>
+URL:     https://github.com/mojako/ref-sources.vim
+
+==============================================================================
+目次						       *ref-kotobank-contents*
+
+概要				|ref-kotobank-introduction|
+オプション			|ref-kotobank-options|
+更新履歴			|ref-kotobank-changelog|
+
+==============================================================================
+概要						   *ref-kotobank-introduction*
+
+*ref-kotobank* , *ref-kotobankej* は、コトバンク <http://kotobank.jp/> が提供
+する用語検索と英和・和英検索にアクセスする為の|ref|用ソースです。
+
+curlを使用してHTMLを取得、タグを削り、見やすく整形して出力します。
+
+==============================================================================
+オプション						*ref-kotobank-options*
+
+一部のオプションは、他の|ref|用ソースとまとめて設定できるよう、共通オプション
+による設定が可能です。
+
+共通オプションが設定されている場合、デフォルト値は無効になり、共通オプションの
+値を利用するようになります。ユーザーによってオプションが設定されている場合は、
+共通オプションよりも、そちらが優先されます。
+
+------------------------------------------------------------------------------
+g:ref_kotobank_auto_resize			  *g:ref_kotobank_auto_resize*
+g:ref_kotobankej_auto_resize			*g:ref_kotobankej_auto_resize*
+
+	自動リサイズ機能を有効にします。(試験的)
+	このオプションが有効なとき、結果の長さに合わせて、開かれるウインドウの
+	縦サイズを小さく調節します。
+	デフォルト値は 0 です。
+	共通オプション: g:ref_auto_resize
+
+------------------------------------------------------------------------------
+g:ref_kotobank_auto_resize_min_size	 *g:ref_kotobank_auto_resize_min_size*
+g:ref_kotobankej_auto_resize_min_size  *g:ref_kotobankej_auto_resize_min_size*
+
+	自動リサイズ機能でウインドウが縮小されるときの、縮小される限度のサイズ
+	を指定します。
+	デフォルト値は 10 です。
+	共通オプション: g:ref_auto_resize_min_size
+
+------------------------------------------------------------------------------
+g:ref_kotobank_use_cache			    *g:ref_kotobank_use_cache*
+g:ref_kotobankej_use_cache			  *g:ref_kotobankej_use_cache*
+
+	このオプションを有効にすると、|ref|のキャッシュ機能を使って、検索結果
+	をキャッシュします。以前にキャッシュした検索結果の表示が速くなりますが
+	キャッシュ容量の肥大化を招く恐れがあります。
+	デフォルト値は 0 です。
+	共通オプション: g:ref_use_cache
+
+------------------------------------------------------------------------------
+g:ref_kotobank_use_webapi			   *g:ref_kotobank_use_webapi*
+
+	このオプションが有効なとき、webapiを使ってWebページの取得を行います。
+	自動で設定される為、特にユーザーが設定する必要はありません。
+	デフォルト値は、webapi-vimが検出された場合 1 、それ以外は 0 です。
+	共通オプション: g:ref_use_webapi
+
+==============================================================================
+更新履歴					      *ref-kotobank-changelog*
+
+1.0.0	2011-08-09
+	- キャッシュ機能を追加
+
+0.0.1	2011-08-08
+	- 最初のリリース
+
+vim:noet:ft=help:norl:ts=8:tw=78
