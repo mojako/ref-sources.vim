@@ -2,7 +2,7 @@
 " File:         autoload/ref/kotobankej.vim
 " Author:       mojako <moja.ojj@gmail.com>
 " URL:          https://github.com/mojako/ref-sources.vim
-" Last Change:  2011-08-19
+" Last Change:  2011-08-24
 " ============================================================================
 
 scriptencoding utf-8
@@ -124,9 +124,10 @@ function! s:source.call(query)
     let ret = substitute(ret, '\s\+\n', '\n', 'g')
     let ret = substitute(ret, '^\n\+', '', 'g')
     let ret = substitute(ret, '\n\+\s*$', '', 'g')
+    let ret = substitute(ret, '\n\{3,}', '\n\n', 'g')
     "}}}2
 
-    return split(ret, '\n\zs\n\+')
+    return ret
 endfunction
 
 " s:source.get_body( <query> ) {{{1
@@ -237,9 +238,9 @@ endfunction
 " s:get_option( <option_name> ) {{{1
 " =============================
 function! s:get_option(optname)
-    return exists('g:ref_' . s:source.name . '_' . a:optname)
-      \ ? eval('g:ref_' . s:source.name . '_' . a:optname)
-      \ : exists('g:ref_' . a:optname) ? eval('g:ref_' . a:optname) : 0
+    return exists('g:ref_{s:source.name}_{a:optname}')
+      \ ? g:ref_{s:source.name}_{a:optname}
+      \ : exists('g:ref_{a:optname}') ? g:ref_{a:optname} : 0
 endfunction
 
 " s:get_url( <url> ) {{{1

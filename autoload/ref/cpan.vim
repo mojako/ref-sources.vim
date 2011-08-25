@@ -2,7 +2,7 @@
 " File:         autoload/ref/cpan.vim
 " Author:       mojako <moja.ojj@gmail.com>
 " URL:          https://github.com/mojako/ref-sources.vim
-" Last Change:  2011-08-19
+" Last Change:  2011-08-24
 " ============================================================================
 
 scriptencoding utf-8
@@ -36,7 +36,7 @@ endfunction
 
 " s:source.call( <query> ) {{{1
 " ========================
-function s:source.call(query)
+function! s:source.call(query)
     " Webページを取得 {{{2
     let url = 'http://cpansearch.perl.org/src/' . a:query
     let ret = s:get_url(url)
@@ -71,58 +71,54 @@ function s:source.call(query)
 
     let ret = substitute(ret, 'E<gt>', '>', 'g')
     let ret = substitute(ret, 'E<lt>', '<', 'g')
-
-    " 空行を詰める {{{2
-    let ret = substitute(ret, '\s\+\n', '\n', 'g')
-    let ret = substitute(ret, '^\n\+', '', 'g')
-    let ret = substitute(ret, '\n\+\s*$', '', 'g')
     "}}}2
 
-    return [ret]
+    return ret
 endfunction
 
 " s:source.complete( <query> ) {{{1
 " ============================
 function! s:source.complete(query)
-    let query = s:iconv(a:query, &enc, 'utf-8')
-
-    let ret = self.search(query)
-    return filter(ret, 'v:val =~? ''\V' . query . '''')
+    return self.search(a:query)
 endfunction
 
 " s:source.get_body( <query> ) {{{1
 " ============================
 function! s:source.get_body(query)
-    let query = s:iconv(a:query, &enc, 'utf-8')
-
-    let index = self.index(query)
-    if index != ''
+    " <query>と一致するインデックスが見付かった場合、そのページを返す {{{2
+    let idx = self.index(a:query)
+    if idx != ''
         return s:iconv(s:get_option('use_cache')
-          \ ? self.cache(index, self) : self.call(index), 'utf-8', &enc)
+          \ ? self.cache(idx, self) : self.call(idx), 'utf-8', &enc)
     endif
 
-    let result = self.search(query)
+    " <query>を検索 {{{2
+    let result = self.search(a:query)
 
+    " 検索結果が1件の場合、そのページを返す {{{2
     if len(result) == 1
         return {
           \ 'body': s:iconv(s:get_option('use_cache')
           \     ? self.cache(self._index[result[0]], self)
           \     : self.call(self._index[result[0]]), 'utf-8', &enc),
-          \ 'query': result[0],
+          \ 'query': result[0]
           \ }
     endif
 
-    let index = index(result, query, 0, 1)
-    if index >= 0
+    " 検索結果に<query>と一致するものがある場合、そのページを返す {{{2
+    let idx = index(result, a:query, 0, 1)
+    if idx >= 0
         return {
           \ 'body': s:iconv(s:get_option('use_cache')
-          \     ? self.cache(self._index[result[index]], self)
-          \     : self.call(self._index[result[index]]), 'utf-8', &enc),
-          \ 'query': result[index],
+          \     ? self.cache(self._index[result[idx]], self)
+          \     : self.call(self._index[result[idx]]), 'utf-8', &enc),
+          \ 'query': result[idx]
           \ }
     endif
 
-    return {'body': result, 'query': query . '?'}
+    " それ以外の場合、検索結果のリストを返す {{{2
+    return {'body': result, 'query': a:query . '?'}
+    "}}}2
 endfunction
 
 " s:source.get_keyword() {{{1
@@ -137,27 +133,21 @@ endfunction
 
 " s:source.index( [ <query> ] ) {{{1
 " =============================
-function s:source.index(...)
+function! s:source.index(...)
+    " インデックスが存在しない場合、キャッシュからロードする {{{2
     if !exists('self._index')
-        let self._index = {}
-
-        if s:get_option('use_cache')
-            let array = self.cache('_index', [])
-
-            let len = len(array)
-            let i = 0
-            while i < len
-                let self._index[array[i]] = array[i+1]
-                let i = i + 2
-            endwhile
-        endif
+        let self._index = s:get_option('use_cache')
+          \ ? s:list2dict(self.cache('_index', [])) : {}
     endif
 
+    " <query>と一致するインデックスの内容を返す {{{2
     if a:0
-        return has_key(self._index, a:1) ? self._index[a:1] : ''
+        return get(self._index, a:1, '')
+    " 引数のない場合、インデックス全体を返す {{{2
     else
         return self._index
     endif
+    "}}}2
 endfunction
 
 " s:source.leave() {{{1
@@ -179,13 +169,9 @@ function! s:source.opened(query)
     syn match   refCpanConcealBackQuote '`' contained conceal transparent
 
     syn include @refPerl syntax/perl.vim
-    syn region  refCpanSampleCode
-      \ start='^[\t ]\+\%([\t* ]\)\@!' end='^$'
+    unlet b:current_syntax
+    syn region  refCpanSampleCode start='^[\t ]\+\%([\t* ]\)\@!' end='^$'
       \ contains=@refPerl
-
-    " syn region  refCpanSampleCode
-    "   \ start='^[\t ]\+\%([\t* ]\)\@!' end='\n\n\%([\t ]\)\@!'
-    "   \ contains=@refPerl
 
     hi def link refCpanTitle    Title
     hi def link refCpanBold     Identifier
@@ -197,15 +183,16 @@ endfunction
 " s:source.search( <query> ) {{{1
 " ==========================
 function! s:source.search(query)
+    " インデックスの初期化 {{{2
+    call self.index()
+
+    " 検索結果のWebページを取得 {{{2
     let url = 'http://search.cpan.org/search?m=module&q='
       \ . s:encodeURIComponent(a:query)
       \ . '&n=' . g:ref_cpan_search_page_size
     let html = s:get_url(url)
 
-    if !exists('self._index')
-        let self._index = {}
-    endif
-
+    " 検索結果をインデックスに追加 {{{2
     let ret = []
     for item in split(html, '<!--item-->')[1:]
         let name = matchstr(item, '<b>\zs.\{-}\ze</b>')
@@ -217,16 +204,14 @@ function! s:source.search(query)
         endif
     endfor
 
+    " インデックスをキャッシュ {{{2
     if s:get_option('use_cache')
-        let array = []
-        for [key, value] in items(self._index)
-            call add(array, key)
-            call add(array, value)
-        endfor
-        call self.cache('_index', array, 1)
+        call self.cache('_index', s:dict2list(self._index), 1)
     endif
 
+    " 検索結果のリストを返す {{{2
     return ret
+    "}}}2
 endfunction
 "}}}1
 
@@ -253,12 +238,23 @@ function! s:encodeURIComponent(str)
     return ret
 endfunction
 
+" s:dict2list( <dictionary> ) {{{1
+" ===========================
+function! s:dict2list(dict)
+    let ret = []
+    for [key, value] in items(a:dict)
+        call add(ret, key)
+        call add(ret, value)
+    endfor
+    return ret
+endfunction
+
 " s:get_option( <option_name> ) {{{1
 " =============================
 function! s:get_option(optname)
-    return exists('g:ref_' . s:source.name . '_' . a:optname)
-      \ ? eval('g:ref_' . s:source.name . '_' . a:optname)
-      \ : exists('g:ref_' . a:optname) ? eval('g:ref_' . a:optname) : 0
+    return exists('g:ref_{s:source.name}_{a:optname}')
+      \ ? g:ref_{s:source.name}_{a:optname}
+      \ : exists('g:ref_{a:optname}') ? g:ref_{a:optname} : 0
 endfunction
 
 " s:get_url( <url> ) {{{1
@@ -282,6 +278,19 @@ function! s:iconv(expr, from, to)
 
     let ret = iconv(a:expr, a:from, a:to)
     return ret != '' ? ret : a:expr
+endfunction
+
+" s:list2dict( <array> ) {{{1
+" ======================
+function! s:list2dict(array)
+    let ret = {}
+    let len = len(a:array)
+    let i = 0
+    while i < len
+        let ret[a:array[i]] = get(a:array, i + 1, '')
+        let i = i + 2
+    endwhile
+    return ret
 endfunction
 "}}}1
 
