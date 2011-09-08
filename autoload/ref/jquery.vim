@@ -2,7 +2,7 @@
 " File:         autoload/ref/jquery.vim
 " Author:       mojako <moja.ojj@gmail.com>
 " URL:          https://github.com/mojako/ref-sources.vim
-" Last Change:  2011-08-25
+" Last Change:  2011-09-10
 " ============================================================================
 
 scriptencoding utf-8
@@ -200,47 +200,10 @@ function s:source.index()
     "}}}2
 endfunction
 
-" s:source.leave() {{{1
-" ================
-function! s:source.leave()
-    syntax clear
-endfunction
-
 " s:source.normalize( <query> ) {{{1
 " =============================
 function! s:source.normalize(query)
     return substitute(a:query, '^\$\.', 'jQuery.', '')
-endfunction
-
-" s:source.opened( <query> ) {{{1
-" ==========================
-function! s:source.opened(query)
-    " syntax coloring {{{2
-    syn match   refJqueryOptionName '^\[.\{-}\]'
-    syn match   refJqueryBold       '\*.\{-}\*' contains=refJqueryConceal
-    syn match   refJqueryCode       '`.\{-}`' contains=refJqueryConceal
-
-    syn match   refJqueryConceal    '\*' contained conceal transparent
-    syn match   refJqueryConceal    '`' contained conceal transparent
-
-    if globpath(&rtp, 'syntax/jquery.vim') != ''
-        syn include @refJavascript syntax/jquery.vim
-    else
-        syn include @refJavascript syntax/javascript.vim
-    endif
-    unlet b:current_syntax
-    syn region  refJquerySampleCode start='^    ' end='^$'
-      \ contains=@refJavascript,refJqueryConceal
-
-    syn include @refHtml syntax/html.vim
-    unlet b:current_syntax
-    syn region  refJquerySampleHtml start='\n    \s*<' end='^$'
-      \ contains=@refHtml,refJqueryConceal
-
-    hi def link refJqueryOptionName Type
-    hi def link refJqueryBold       Identifier
-    hi def link refJqueryCode       Statement
-    "}}}2
 endfunction
 "}}}1
 

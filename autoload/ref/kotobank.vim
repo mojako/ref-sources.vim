@@ -2,7 +2,7 @@
 " File:         autoload/ref/kotobank.vim
 " Author:       mojako <moja.ojj@gmail.com>
 " URL:          https://github.com/mojako/ref-sources.vim
-" Last Change:  2011-08-24
+" Last Change:  2011-09-10
 " ============================================================================
 
 scriptencoding utf-8
@@ -109,32 +109,9 @@ function! s:source.get_body(query)
     endif
 endfunction
 
-" s:source.leave() {{{1
-" ================
-function! s:source.leave()
-    syntax clear
-endfunction
-
 " s:source.opened( <query> ) {{{1
 " ==========================
 function! s:source.opened(query)
-    " syntax coloring {{{2
-    syn match   refKotobankDicName  '^.*の解説$'
-    syn match   refKotobankBold     '\*.\{-}\*' contains=refKotobankConceal
-    syn match   refKotobankTitle    '\*.\{-}\*\ze\n　'
-      \ contains=refKotobankConceal
-    syn match   refKotobankKana     '([ぁ-ん]\+)'
-    syn match   refKotobankLabel    '\[.\{-}\]'
-    syn match   refKotobankLabel    '［.\{-}］'
-
-    syn match   refKotobankConceal  '\*' contained conceal transparent
-
-    hi def link refKotobankDicName  Type
-    hi def link refKotobankTitle    Title
-    hi def link refKotobankBold     Identifier
-    hi def link refKotobankKana     Comment
-    hi def link refKotobankLabel    Constant
-
     " 自動リサイズ {{{2
     if s:get_option('auto_resize')
         if !exists('w:old_height')

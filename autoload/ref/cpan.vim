@@ -2,7 +2,7 @@
 " File:         autoload/ref/cpan.vim
 " Author:       mojako <moja.ojj@gmail.com>
 " URL:          https://github.com/mojako/ref-sources.vim
-" Last Change:  2011-08-24
+" Last Change:  2011-09-10
 " ============================================================================
 
 scriptencoding utf-8
@@ -147,36 +147,6 @@ function! s:source.index(...)
     else
         return self._index
     endif
-    "}}}2
-endfunction
-
-" s:source.leave() {{{1
-" ================
-function! s:source.leave()
-    syntax clear
-endfunction
-
-" s:source.opened( <query> ) {{{1
-" ==========================
-function! s:source.opened(query)
-    " syntax coloring {{{2
-    syn match   refCpanTitle    '^#.*$'
-    syn match   refCpanItalic   '\*.\{-}\*' contains=refCpanConcealAsterisk
-    syn match   refCpanBold     '\*\*.\{-}\*\*' contains=refCpanConcealAsterisk
-    syn match   refCpanCode     '`.\{-}`' contains=refCpanConcealBackQuote
-
-    syn match   refCpanConcealAsterisk  '\*' contained conceal transparent
-    syn match   refCpanConcealBackQuote '`' contained conceal transparent
-
-    syn include @refPerl syntax/perl.vim
-    unlet b:current_syntax
-    syn region  refCpanSampleCode start='^[\t ]\+\%([\t* ]\)\@!' end='^$'
-      \ contains=@refPerl
-
-    hi def link refCpanTitle    Title
-    hi def link refCpanBold     Identifier
-    hi def link refCpanItalic   Constant
-    hi def link refCpanCode     Statement
     "}}}2
 endfunction
 
