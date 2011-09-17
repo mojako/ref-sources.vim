@@ -2,7 +2,7 @@
 " File:         autoload/refsrc.vim
 " Author:       mojako <moja.ojj@gmail.com>
 " URL:          https://github.com/mojako/ref-sources.vim
-" Last Change:  2011-09-16
+" Last Change:  2011-09-17
 " ============================================================================
 
 scriptencoding utf-8
@@ -76,7 +76,6 @@ function! refsrc#autoResizeRefWindow(min)
           \     unlet w:old_height |
           \     augroup! RestoreRefWindowSize |
           \ endif
-        autocmd! BufWinLeave <buffer> augroup! RestoreRefWindowSize
     augroup END
 endfunction
 
