@@ -2,7 +2,7 @@
 " File:         autoload/ref/cpan.vim
 " Author:       mojako <moja.ojj@gmail.com>
 " URL:          https://github.com/mojako/ref-sources.vim
-" Last Change:  2011-09-10
+" Last Change:  2011-09-16
 " ============================================================================
 
 scriptencoding utf-8
@@ -17,63 +17,17 @@ if !exists('g:ref_cpan_search_page_size')
     let g:ref_cpan_search_page_size = 20
 endif
 
-if !exists('g:ref_cpan_use_cache') && !exists('g:ref_use_cache')
-    let g:ref_cpan_use_cache = 0
-endif
-
-if !exists('g:ref_cpan_use_webapi') && !exists('g:ref_use_webapi')
-    let g:ref_cpan_use_webapi = globpath(&rtp, 'autoload/http.vim') != ''
+if !exists('g:ref_cpan_use_cache')
+    let g:ref_cpan_use_cache = exists('g:ref_use_cache') ? g:ref_use_cache : 0
 endif
 "}}}
 
-let s:source = {'name': 'cpan', 'version': 101}
+let s:source = {'name': 'cpan', '_index': {}}
 
 " s:source.available() {{{1
 " ====================
 function! s:source.available()
     return executable('curl')
-endfunction
-
-" s:source.call( <query> ) {{{1
-" ========================
-function! s:source.call(query)
-    " Webページを取得 {{{2
-    let url = 'http://cpansearch.perl.org/src/' . a:query
-    let ret = s:get_url(url)
-
-    " 埋め込まれたPOD部分を抽出 {{{2
-    let ret = substitute(ret, '^.\{-}\ze\n=', '', '')
-    let ret = substitute(ret, '\n=cut.\{-}\ze\n=', '', 'g')
-    let ret = substitute(ret, '\n=cut.\{-}$', '', '')
-
-    " パラグラフ要素を置換 {{{2
-    let ret = substitute(ret, '\n\zs=head1\s\+\(.\{-}\)\ze\n', '# \1', 'g')
-    let ret = substitute(ret, '\n\zs=head2\s\+\(.\{-}\)\ze\n', '## \1', 'g')
-
-    let ret = substitute(ret, '\n=over\%( \d\+\)\?\n', '', 'g')
-    let ret = substitute(ret, '\n=back\n', '', 'g')
-    let ret = substitute(ret, '\n\zs=item ', '  ', 'g')
-
-    " ブロック要素を置換 {{{2
-    let ret = substitute(ret, 'B<<\(.\{-}\)>>', '**\1**', 'g')
-    let ret = substitute(ret, 'B<\(.\{-}\)>', '**\1**', 'g')
-    let ret = substitute(ret, 'I<<\(.\{-}\)>>', '*\1*', 'g')
-    let ret = substitute(ret, 'I<\(.\{-}\)>', '*\1*', 'g')
-    let ret = substitute(ret, 'C<< \(.\{-}\) >>', '`\1`', 'g')
-    let ret = substitute(ret, 'C<\(.\{-}\)>', '`\1`', 'g')
-
-    let ret = substitute(ret, '[FLSX]<\(.\{-}\)>', '\1', 'g')
-
-    " 文字参照を置換 {{{2
-    let ret = substitute(ret, 'E<#\(\d\+\)>', '\=nr2char(submatch(1))', 'g')
-    let ret = substitute(ret, 'E<#x\(\x\+\)>',
-      \ '\=nr2char("0x" . submatch(1))', 'g')
-
-    let ret = substitute(ret, 'E<gt>', '>', 'g')
-    let ret = substitute(ret, 'E<lt>', '<', 'g')
-    "}}}2
-
-    return ret
 endfunction
 
 " s:source.complete( <query> ) {{{1
@@ -85,86 +39,97 @@ endfunction
 " s:source.get_body( <query> ) {{{1
 " ============================
 function! s:source.get_body(query)
-    " <query>と一致するインデックスが見付かった場合、そのページを返す {{{2
-    let idx = self.index(a:query)
-    if idx != ''
-        return s:iconv(s:get_option('use_cache')
-          \ ? self.cache(idx, self) : self.call(idx), 'utf-8', &enc)
+    " <query>のキャッシュが存在する場合、それを返す {{{2
+    if g:ref_cpan_use_cache
+        let cache_name = substitute(toupper(a:query), ':\+', '_', 'g')
+        let cache = self.cache(cache_name)
+        if type(cache) == type([])
+            return {
+              \ 'query' : cache[0],
+              \ 'body'  : cache[1:],
+              \ }
+        endif
     endif
 
-    " <query>を検索 {{{2
-    let result = self.search(a:query)
+    " インデックスから<query>の項目を探す {{{2
+    let m = filter(keys(self._index), 'v:val =~? ''^'' . a:query . ''$''')
+    if len(m)
+        let query = m[0]
+    " 見付からない場合、CPANから<query>を検索する {{{2
+    else
+        let s = self.search(a:query)
+        let m = filter(copy(s), 'v:val =~? ''^'' . a:query . ''$''')
+        if len(m)
+            let query = m[0]
+        elseif len(s) == 1
+            let query = s[0]
+        else
+            " 候補が複数ある場合は、リストを返す
+            return {
+              \ 'query' : a:query . '?',
+              \ 'body'  : s,
+              \ }
+        endif
+    endif
 
-    " 検索結果が1件の場合、そのページを返す {{{2
-    if len(result) == 1
+    " キャッシュが有効な場合の処理 {{{2
+    if g:ref_cpan_use_cache
+        " 候補のキャッシュが存在する場合、それを返す {{{3
+        let cache_name = substitute(toupper(query), ':\+', '_', 'g')
+        let cache = self.cache(cache_name)
+        if type(cache) == type([])
+            return {
+              \ 'query' : cache[0],
+              \ 'body'  : cache[1:],
+              \ }
+        endif
+
+        " 存在しない場合、CPANからページを取得してキャッシュする {{{3
+        let body = s:get_body('http://cpansearch.perl.org/src/'
+          \ . self._index[query])
+
+        call self.cache(cache_name, [query, body], 1)
+
+        " ページを返す {{{3
         return {
-          \ 'body': s:iconv(s:get_option('use_cache')
-          \     ? self.cache(self._index[result[0]], self)
-          \     : self.call(self._index[result[0]]), 'utf-8', &enc),
-          \ 'query': result[0]
+          \ 'query' : query,
+          \ 'body'  : body,
           \ }
+        "}}}
     endif
 
-    " 検索結果に<query>と一致するものがある場合、そのページを返す {{{2
-    let idx = index(result, a:query, 0, 1)
-    if idx >= 0
-        return {
-          \ 'body': s:iconv(s:get_option('use_cache')
-          \     ? self.cache(self._index[result[idx]], self)
-          \     : self.call(self._index[result[idx]]), 'utf-8', &enc),
-          \ 'query': result[idx]
-          \ }
-    endif
-
-    " それ以外の場合、検索結果のリストを返す {{{2
-    return {'body': result, 'query': a:query . '?'}
-    "}}}2
+    " キャッシュが無効な場合、CPANからページを取得して返す {{{2
+    return {
+      \ 'query' : query,
+      \ 'body'  : s:get_body('http://cpansearch.perl.org/src/'
+      \     . self._index[query]),
+      \ }
+    "}}}
 endfunction
 
 " s:source.get_keyword() {{{1
 " ======================
 function! s:source.get_keyword()
     let isk_save = &l:isk
-    setlocal isk=48-58,65-90,97-122
+    setlocal isk=48-58,65-90,97-122     " 0-9:A-Za-z
     let kwd = expand('<cword>')
     let &l:isk = isk_save
     return kwd
 endfunction
 
-" s:source.index( [ <query> ] ) {{{1
-" =============================
-function! s:source.index(...)
-    " インデックスが存在しない場合、キャッシュからロードする {{{2
-    if !exists('self._index')
-        let self._index = s:get_option('use_cache')
-          \ ? s:list2dict(self.cache('_index', [])) : {}
-    endif
-
-    " <query>と一致するインデックスの内容を返す {{{2
-    if a:0
-        return get(self._index, a:1, '')
-    " 引数のない場合、インデックス全体を返す {{{2
-    else
-        return self._index
-    endif
-    "}}}2
-endfunction
-
 " s:source.search( <query> ) {{{1
 " ==========================
 function! s:source.search(query)
-    " インデックスの初期化 {{{2
-    call self.index()
-
     " 検索結果のWebページを取得 {{{2
-    let url = 'http://search.cpan.org/search?m=module&q='
-      \ . s:encodeURIComponent(a:query)
-      \ . '&n=' . g:ref_cpan_search_page_size
-    let html = s:get_url(url)
+    let result = refsrc#get_url('http://search.cpan.org/search', {
+      \ 'm' : 'module',
+      \ 'n' :  g:ref_cpan_search_page_size,
+      \ 'q' :  a:query,
+      \ })
 
     " 検索結果をインデックスに追加 {{{2
     let ret = []
-    for item in split(html, '<!--item-->')[1:]
+    for item in split(result, '<!--item-->')[1:]
         let name = matchstr(item, '<b>\zs.\{-}\ze</b>')
         let link = matchstr(item, '<a href="\zs.\{-}\.\%(pm\|pod\)\ze">')
         if link != ''
@@ -174,101 +139,64 @@ function! s:source.search(query)
         endif
     endfor
 
-    " インデックスをキャッシュ {{{2
-    if s:get_option('use_cache')
-        call self.cache('_index', s:dict2list(self._index), 1)
-    endif
-
     " 検索結果のリストを返す {{{2
     return ret
-    "}}}2
+    "}}}
 endfunction
-"}}}1
+"}}}
 
 function! ref#cpan#define()
     return copy(s:source)
 endfunction
 
-" s:encodeURIComponent( <string> ) {{{1
-" ================================
-function! s:encodeURIComponent(str)
-    let ret = ''
-    let len = strlen(a:str)
-    let i = 0
-    while i < len
-        if a:str[i] =~# "[0-9A-Za-z._~!'()*-]"
-            let ret .= a:str[i]
-        elseif a:str[i] == ' '
-            let ret .= '+'
-        else
-            let ret .= printf('%%%02X', char2nr(a:str[i]))
-        endif
-        let i = i + 1
-    endwhile
-    return ret
+" s:get_body( <url> ) {{{1
+" ===================
+function! s:get_body(url)
+    " CPANからソースを取得 {{{2
+    let body = substitute(refsrc#get_url(a:url), '\r\n\?', '\n', 'g')
+
+    " 埋め込まれたPOD部分を抽出 {{{2
+    let body = substitute(body, '^.\{-}\ze\n=', '', '')
+    let body = substitute(body, '\n=cut.\{-}\ze\n=', '', 'g')
+    let body = substitute(body, '\n=cut.\{-}$', '', '')
+
+    " パラグラフ要素を置換 {{{2
+    let body = substitute(body, '\n\zs=head1\s\+\(.\{-}\)\ze\n', '# \1', 'g')
+    let body = substitute(body, '\n\zs=head2\s\+\(.\{-}\)\ze\n', '## \1', 'g')
+
+    let body = substitute(body, '\n=over\%( \d\+\)\?\n', '', 'g')
+    let body = substitute(body, '\n=back\n', '', 'g')
+    let body = substitute(body, '\n\zs=item\%(\s\+\*\)\?\s*\n*', '  * ', 'g')
+
+    " インライン要素を置換 {{{2
+    let body = substitute(body, 'B<<\(.\{-}\)>>', '**\1**', 'g')
+    let body = substitute(body, 'B<\(.\{-}\)>', '**\1**', 'g')
+    let body = substitute(body, 'I<<\(.\{-}\)>>', '*\1*', 'g')
+    let body = substitute(body, 'I<\(.\{-}\)>', '*\1*', 'g')
+    let body = substitute(body, 'C<< \(.\{-}\) >>', '`\1`', 'g')
+    let body = substitute(body, 'C<\(.\{-}\)>', '`\1`', 'g')
+
+    let body = substitute(body, '[FLSX]<\(.\{-}\)>', '\1', 'g')
+
+    " 文字参照を置換 {{{2
+    let body = substitute(body, 'E<#\(\d\+\)>', '\=nr2char(submatch(1))', 'g')
+    let body = substitute(body, 'E<#x\(\x\+\)>',
+      \ '\=nr2char("0x" . submatch(1))', 'g')
+
+    let body = substitute(body, 'E<gt>', '>', 'g')
+    let body = substitute(body, 'E<lt>', '<', 'g')
+
+    " 空行を詰める {{{3
+    let body = substitute(body, '\s\+\n', '\n', 'g')
+    let body = substitute(body, '^\n\+', '', 'g')
+    let body = substitute(body, '\n\+\s*$', '', 'g')
+    let body = substitute(body, '\n\{3,}', '\n\n', 'g')
+
+    " 変換されたデータを返す {{{2
+    return body
+    "}}}
 endfunction
-
-" s:dict2list( <dictionary> ) {{{1
-" ===========================
-function! s:dict2list(dict)
-    let ret = []
-    for [key, value] in items(a:dict)
-        call add(ret, key)
-        call add(ret, value)
-    endfor
-    return ret
-endfunction
-
-" s:get_option( <option_name> ) {{{1
-" =============================
-function! s:get_option(optname)
-    return exists('g:ref_{s:source.name}_{a:optname}')
-      \ ? g:ref_{s:source.name}_{a:optname}
-      \ : exists('g:ref_{a:optname}') ? g:ref_{a:optname} : 0
-endfunction
-
-" s:get_url( <url> ) {{{1
-" ==================
-function! s:get_url(url)
-    if s:get_option('use_webapi')
-        return http#get(a:url).content
-    else
-        return ref#system(['curl', '-kLs', a:url]).stdout
-    endif
-endfunction
-
-" s:iconv( <expr>, <from>, <to> ) {{{1
-" ===============================
-function! s:iconv(expr, from, to)
-    if a:from == '' || a:to == '' || a:from ==? a:to
-        return a:expr
-    elseif type(a:expr) == type([]) || type(a:expr) == type({})
-        return map(a:expr, 's:iconv(v:val, a:from, a:to)')
-    endif
-
-    let ret = iconv(a:expr, a:from, a:to)
-    return ret != '' ? ret : a:expr
-endfunction
-
-" s:list2dict( <array> ) {{{1
-" ======================
-function! s:list2dict(array)
-    let ret = {}
-    let len = len(a:array)
-    let i = 0
-    while i < len
-        let ret[a:array[i]] = get(a:array, i + 1, '')
-        let i = i + 2
-    endwhile
-    return ret
-endfunction
-"}}}1
-
-if s:source.available() && s:get_option('use_cache')
-  \ && ref#cache(s:source.name, '_version', [0])[0] < 101
-    call ref#rmcache(s:source.name)
-    call ref#cache(s:source.name, '_version', [s:source.version])
-endif
+"}}}
 
 " s:cpo_save {{{1
 let &cpo = s:cpo_save

@@ -3,7 +3,7 @@
 " File:         syntax/ref-jquery.vim
 " Author:       mojako <moja.ojj@gmail.com>
 " URL:          https://github.com/mojako/ref-sources.vim
-" Last Change:  2011-09-09
+" Last Change:  2011-09-16
 " ============================================================================
 
 " s:cpo_save {{{1
@@ -38,9 +38,12 @@ unlet b:current_syntax
 syn region  refJquerySampleHtml start='\n    \s*<' end='^$'
   \ contains=@refHtml,refJqueryConceal
 
+syn region  refJqueryKeyword oneline concealends
+  \ matchgroup=refJqueryConceal start='^|' end='|$'
+
 " Highlight Group Link
-hi def link refJqueryOptionName Type
-hi def link refJqueryBold       Identifier
+hi def link refJqueryOptionName Identifier
+hi def link refJqueryBold       Type
 hi def link refJqueryCode       Statement
 
 let b:current_syntax = 'ref-jquery'
