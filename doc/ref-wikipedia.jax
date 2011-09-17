@@ -1,0 +1,34 @@
+*ref-wikipedia.txt*	ウィキペディアをチラ見する為のref用ソース
+
+Version: 1.0.0
+Author:  mojako <moja.ojj@gmail.com>
+URL:     https://github.com/mojako/ref-sources.vim
+
+==============================================================================
+目次						      *ref-wikipedia-contents*
+
+概要				|ref-wikipedia-introduction|
+オプション			|ref-wikipedia-options|
+更新履歴			|ref-wikipedia-changelog|
+
+==============================================================================
+概要						  *ref-wikipedia-introduction*
+
+*ref-wikipedia* は、ウィキペディア <http://ja.wikipedia.org> の記事を検索し、
+内容をチラ見する為の|ref|用ソースです。
+
+==============================================================================
+オプション					       *ref-wikipedia-options*
+
+g:ref_wikipedia_lang					*g:ref_wikipedia_lang*
+
+	使用するウィキペディアの言語を指定します。
+	デフォルト値は|v:lang|から先頭のアルファベット部分を切り出した値です。
+
+==============================================================================
+更新履歴					     *ref-wikipedia-changelog*
+
+1.0.0	2011-09-17
+	- 最初のリリース
+
+vim:noet:ft=help:norl:ts=8:tw=78

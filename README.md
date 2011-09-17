@@ -1,14 +1,14 @@
 ref-sources.vim
 ===============
 
-[vim-ref][git:vim-ref] 用の追加ソース。
+[vim-ref][git:vim-ref] 用の追加ソース・パッケージ。
 
-[ref-alc.vim][git:ref-alc.vim] と同じく、データの取得に curl
-(もしくは、[webapi-vim][git:webapi-vim]) を使い、HTML を整形・表示します。
+[vim-ref][git:vim-ref] 付属の ref-alc などとは違い、
+テキストベースなブラウザを使わず、curl を使用します。
 
-[git:vim-ref]:      https://github.com/thinca/vim-ref
-[git:ref-alc.vim]:  https://github.com/mojako/ref-alc.vim
-[git:webapi-vim]:   https://github.com/mattn/webapi-vim
+[git:vim-ref]:          https://github.com/thinca/vim-ref
+[git:webapi-vim]:       https://github.com/mattn/webapi-vim
+[git:open-browser.vim]: https://github.com/tyru/open-browser.vim
 
 必要環境
 --------
@@ -19,14 +19,17 @@ ref-sources.vim
 以下は、お好みで
 
 * [webapi-vim][git:webapi-vim]
+* [open-browser.vim][git:open-browser.vim]
 
 収録ソース
 ----------
 
+* alc2 ([スペースアルク 英辞郎 on the WEB](http://www.alc.co.jp/))
 * cpan ([CPAN](http://search.cpan.org/))
 * jquery ([jQAPI](http://jqapi.com/), 実験的)
 * kotobank ([コトバンク](http://kotobank.jp/))
 * kotobankej ([コトバンク 英和・和英検索](http://kotobank.jp/))
+* wikipedia ([ウィキペディア](http://www.wikipedia.org/), 実験的)
 
 設定
 ----
@@ -46,11 +49,12 @@ ref-sources.vim
 let g:ref_jquery_doc_path = 'path/to/jqapi-latest'
 ```
 
-### 自動リサイズ機能を有効にする (kotobank, kotobankej)
+### 自動リサイズ機能を有効にする (alc2, kotobank, kotobankej)
 
 結果に合わせて、開かれるウインドウの縦サイズを調節します。
 
 ```vim
+let g:ref_alc2_auto_resize = 1
 let g:ref_kotobank_auto_resize = 1
 let g:ref_kotobankej_auto_resize = 1
 ```
@@ -64,6 +68,7 @@ let g:ref_auto_resize = 1
 ### キャッシュを有効にする
 
 ```vim
+let g:ref_alc2_use_cache = 1
 let g:ref_cpan_use_cache = 1
 let g:ref_jquery_use_cache = 1
 let g:ref_kotobank_use_cache = 1
@@ -79,6 +84,8 @@ let g:ref_use_cache = 1
 TODO
 ----
 
-* [cpan] Perlコードの構文強調がおかしい問題の修正
+* [cpan] サンプルコードの構文強調がおかしくなる問題の修正
 * [kotobankej] 大量の外字画像をすべて変換できるようにする
+* [wikipedia] キャッシュ機能を追加
+* 共通の関数をモジュール化
 * 収録ソースをもっと増やす
