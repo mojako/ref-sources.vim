@@ -40,6 +40,14 @@ ref-sources.vim
 その他のオプションを確認するには、各ソースのヘルプを参照
 してください。
 
+### vim-ref 付属の ref-alc を ref-alc2 で上書きする
+
+`Ref alc` で ref-alc2 が呼ばれるようにします。
+
+```vim
+let g:ref_alc2_overwrite_alc = 1
+```
+
 ### ローカルに保存されたドキュメントを参照する (jquery)
 
 [jQAPI](http://jqapi.com/) から HTML Version をダウンロードし、
@@ -59,10 +67,31 @@ let g:ref_kotobank_auto_resize = 1
 let g:ref_kotobankej_auto_resize = 1
 ```
 
-もしくは、共通オプションを利用して以下の方法でも設定できます。
+もしくは、共通オプションを利用して以下の方法 でも設定できます。
 
 ```vim
 let g:ref_auto_resize = 1
+```
+
+### 各言語版のウィキペディアで検索する
+
+`g:ref_wikipedia_lang` に使用したい言語を設定します。
+
+```vim
+let g:ref_wikipedia_lang = 'en'
+```
+
+以下のようにすると、`wikipedia` に加え、英語版で検索する為の
+`wikipedia_en` が登録されます。
+
+```vim
+let g:ref_wikipedia_lang = ['ja', 'en']
+```
+
+もしくは、辞書型で設定する事で自由にソース名を付けられます。
+
+```vim
+let g:ref_wikipedia_lang = {'wikij': 'ja', 'wikie': 'en'}
 ```
 
 ### キャッシュを有効にする

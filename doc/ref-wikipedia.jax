@@ -23,6 +23,15 @@ URL:     https://github.com/mojako/ref-sources.vim
 g:ref_wikipedia_lang					*g:ref_wikipedia_lang*
 
 	使用するウィキペディアの言語を指定します。
+	次のようにリストで指定すると 'wikipedia' に加え、英語版で検索する為の
+	'wikipedia_en' が登録されます。>
+
+	    let g:ref_wikipedia_lang = ['ja', 'en']
+ 
+	もしくは、辞書型で設定する事で自由にソース名を付けられます。>
+
+	    let g:ref_wikipedia_lang = {'wikij': 'ja', 'wikie': 'en'}
+
 	デフォルト値は|v:lang|から先頭のアルファベット部分を切り出した値です。
 
 ==============================================================================
