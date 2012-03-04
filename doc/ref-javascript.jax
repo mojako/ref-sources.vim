@@ -1,0 +1,62 @@
+*ref-javascript.txt*	JavaScript APIドキュメントを検索する為のref用ソース
+
+Version: 1.0.0
+Author:  mojako <moja.ojj@gmail.com>
+         shiwano <shiwano@gmail.com>
+URL:     https://github.com/mojako/ref-sources.vim
+
+==============================================================================
+目次						       *ref-javascript-contents*
+
+概要				|ref-javascript-introduction|
+オプション			|ref-javascript-options|
+更新履歴			|ref-javascript-changelog|
+
+==============================================================================
+概要						     *ref-javascript-introduction*
+
+*ref-javascript* は、JSRef <http://jsref.64p.org/> が提供するJavaScript APIドキュメントに
+アクセスする為の|ref|用ソースです。
+
+また、予めJSRefのGitリポジトリからHTMLバージョンのドキュメントをダウンロードせておく事で、
+オフラインでも使用する事ができます。設定方法は、|g:ref_javascript_doc_path|の項を
+参照してください。
+
+==============================================================================
+オプション						  *ref-javascript-options*
+
+一部のオプションは、他の|ref|用ソースとまとめて設定できるよう、共通オプション
+による設定が可能です。
+
+共通オプションが設定されている場合、デフォルト値は共通オプションの値を利用する
+ようになります。ユーザーによりオプションが設定されている場合は、共通オプション
+よりも、そちらが優先されます。
+
+
+g:ref_javascript_doc_path				       *g:ref_javascript_doc_path*
+
+	JSRefのドキュメントが保存されているディレクトリを指定します。
+	値が未設定の場合は、JSRefのWebサイトからドキュメントを取得します。
+	デフォルト値は空です。
+
+g:ref_javascript_use_cache				      *g:ref_javascript_use_cache*
+
+	このオプションを有効にすると、|ref|のキャッシュ機能を使って、検索用の
+	インデックスとページ・データをキャッシュします。
+	デフォルト値は 0 です。
+	共通オプション: g:ref_use_cache
+
+g:ref_use_webapi
+
+	このオプションが有効なとき、webapiを使ってWebページの取得を行います。
+	自動で設定される為、特にユーザーが設定する必要はありません。
+	このオプションは、他の|ref|用ソースと共有のオプションです。
+	デフォルト値は、webapi-vimが検出された場合 1 、それ以外は 0 です。
+
+==============================================================================
+更新履歴						*ref-javascript-changelog*
+
+1.0.0	2012-03-16
+	- 最初のリリース
+
+vim:noet:ft=help:norl:ts=8:tw=78
