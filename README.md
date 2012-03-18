@@ -27,6 +27,7 @@ ref-sources.vim
 * alc2 ([スペースアルク 英辞郎 on the WEB](http://www.alc.co.jp/))
 * cpan ([CPAN](http://search.cpan.org/))
 * jquery ([jQAPI](http://jqapi.com/), 実験的)
+* javascript ([JSRef](http://jsref.64p.org/), 実験的)
 * kotobank ([コトバンク](http://kotobank.jp/))
 * kotobankej ([コトバンク 英和・和英検索](http://kotobank.jp/))
 * wikipedia ([ウィキペディア](http://www.wikipedia.org/), 実験的)
@@ -48,13 +49,15 @@ ref-sources.vim
 let g:ref_alc2_overwrite_alc = 1
 ```
 
-### ローカルに保存されたドキュメントを参照する (jquery)
+### ローカルに保存されたドキュメントを参照する (jquery, javascript)
 
-[jQAPI](http://jqapi.com/) から HTML Version をダウンロードし、
-解凍先のディレクトリを、以下のように設定してください。
+[jQAPI](http://jqapi.com/) から HTML Version をダウンロードして解凍、
+[JSRefのGitリポジトリ](https://github.com/tokuhirom/jsref)をCloneし、
+ディレクトリを、以下のように設定してください。
 
 ```vim
 let g:ref_jquery_doc_path = 'path/to/jqapi-latest'
+let g:ref_javascript_doc_path = 'path/to/jsref/htdoc'
 ```
 
 ### 自動リサイズ機能を有効にする (alc2, kotobank, kotobankej)
@@ -100,6 +103,7 @@ let g:ref_wikipedia_lang = {'wikij': 'ja', 'wikie': 'en'}
 let g:ref_alc2_use_cache = 1
 let g:ref_cpan_use_cache = 1
 let g:ref_jquery_use_cache = 1
+let g:ref_javascript_use_cache = 1
 let g:ref_kotobank_use_cache = 1
 let g:ref_kotobankej_use_cache = 1
 ```
