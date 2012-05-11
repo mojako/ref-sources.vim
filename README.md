@@ -24,7 +24,6 @@ ref-sources.vim
 収録ソース
 ----------
 
-* alc2 ([スペースアルク 英辞郎 on the WEB](http://www.alc.co.jp/))
 * cpan ([CPAN](http://search.cpan.org/))
 * jquery ([jQAPI](http://jqapi.com/), 実験的)
 * javascript ([JSRef](http://jsref.64p.org/), 実験的)
@@ -41,14 +40,6 @@ ref-sources.vim
 その他のオプションを確認するには、各ソースのヘルプを参照
 してください。
 
-### vim-ref 付属の ref-alc を ref-alc2 で上書きする
-
-`Ref alc` で ref-alc2 が呼ばれるようにします。
-
-```vim
-let g:ref_alc2_overwrite_alc = 1
-```
-
 ### ローカルに保存されたドキュメントを参照する (jquery, javascript)
 
 [jQAPI](http://jqapi.com/) から HTML Version をダウンロードして解凍、
@@ -60,12 +51,11 @@ let g:ref_jquery_doc_path = 'path/to/jqapi-latest'
 let g:ref_javascript_doc_path = 'path/to/jsref/htdoc'
 ```
 
-### 自動リサイズ機能を有効にする (alc2, kotobank, kotobankej)
+### 自動リサイズ機能を有効にする (kotobank, kotobankej)
 
 結果に合わせて、開かれるウインドウの縦サイズを調節します。
 
 ```vim
-let g:ref_alc2_auto_resize = 1
 let g:ref_kotobank_auto_resize = 1
 let g:ref_kotobankej_auto_resize = 1
 ```
@@ -100,7 +90,6 @@ let g:ref_wikipedia_lang = {'wikij': 'ja', 'wikie': 'en'}
 ### キャッシュを有効にする
 
 ```vim
-let g:ref_alc2_use_cache = 1
 let g:ref_cpan_use_cache = 1
 let g:ref_jquery_use_cache = 1
 let g:ref_javascript_use_cache = 1
